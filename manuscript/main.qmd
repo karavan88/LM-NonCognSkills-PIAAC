@@ -169,7 +169,7 @@ surv <- function(k, r) round(100 * mean(sapply(res$sens, sens_share, k = k, r = 
 rmin <- function(k) { x <- S("rho", paste0("rho_star|blocks_1to", k)); min(x$estimate[!x$country %in% c("Mean", "Median")]) }
 
 # fig() saves the figure; show_fig() prints it. Each table and figure sits on its own page
-# ({{< pagebreak >}} before and after), as the journal requires.
+# ( before and after), as the journal requires.
 show_fig <- function(name)
   knitr::include_graphics(file.path(fig_dir, paste0(name, if (latex) ".pdf" else ".png")), dpi = if (latex) NA else if (knitr::pandoc_to("docx")) 300 else 110)
 fig <- function(p, name, width = 6.5, height = 4) {
@@ -224,11 +224,8 @@ The occupation and employer block contains 4 occupational skill groups, employer
 
 7 further countries, `r listc(country_name(added_d))`, release hourly earnings only as deciles of the national distribution. With them, the sample covers `r w(K_d)` countries and `r fmtN(N_d)` employees; for this sample the outcome is the earnings decile multiplied by 10, in percentile points of the national distribution. The decile estimates are reported alongside the log-wage estimates and are not pooled with them. Their different outcome scale provides a separate check of the patterns in the 12-country sample.
 
-{{< pagebreak >}}
-
 ```{r}
-#| label: tbl-desc
-#| tbl-cap: "Descriptive statistics of the analysis sample by country (12 countries, weighted)"
+#| label: desc-tbl-data
 wm <- function(x, w) weighted.mean(x, w, na.rm = TRUE)
 desc <- do.call(rbind, lapply(countries, function(cc) {
   d <- d_[[cc]]; wt <- d$SPFWT0
@@ -247,12 +244,7 @@ tbl_desc <- ltable(desc, header = c("Country", "N", "Women\n(%)", "Tertiary\n(%)
                         "Influencing", "Organizing", "Learning", "Time\npressure", "Cooperation"),
        align = "lrrrrrrrrr", groups = list(list(list(label = "Mean task index (0–1)", from = 6, to = 10))),
        tabcolsep = 3, notes = notes_desc)
-tbl_desc
 ```
-
-`r table_notes(notes_desc)`
-
-{{< pagebreak >}}
 
 # Empirical approach
 
@@ -261,12 +253,23 @@ tbl_desc
 The baseline model is a Mincer-type wage equation [@mincer1974] to which the 5 non-cognitive skills are added. It is estimated separately for each country by weighted least squares with the final survey weight. For employee $i$, the equation
 $$
 \ln w_{i} = \alpha + \sum_{j=1}^{5} \beta_j^{0}\, T_{ij} + \gamma' X_i + u_i,
-$$
+$$ {#eq-wage}
+
 gives the *total effect* $\beta_j^{0}$ of skill $j$, where $T_{ij}$ are the 5 standardized non-cognitive skills, always entered jointly, and $X_i$ the baseline controls (age group, gender, nativity and parental education). Age groups take the place of potential experience. Schooling, the central term of the Mincer equation, is left out of the baseline on purpose: education and cognitive skills enter as mediators, because the question is how much of each return runs through them. Coefficients are multiplied by 100 and read as approximate percentage differences in hourly wages, written as %.
 
-*Mediation model.* The mediators are the variables in 4 blocks: education, cognitive skills, occupation and employer, and tasks. Following the linear structural equation approach of @imai2010, extended to several mediators by @imai2013, each mediator $M_{im}$ is regressed on the skills and the baseline controls (mediator equations, coefficient $a_{jm}$ on $T_{ij}$), and log wages are regressed on the skills, the controls and all mediators at once (outcome equation, coefficient $b_m$ on $M_{im}$ and $\beta_j$ on $T_{ij}$). The *average causal mediation effect* (ACME) of skill $j$ through block $k$, its indirect effect, is the sum over the mediators in that block of the product of the two coefficients, $\delta_{jk} = \sum_{m \in k} a_{jm} b_m$. The coefficient $\beta_j$ is the *average direct effect* (ADE): the effect among workers with comparable education, cognitive skills, occupation, employer sector and establishment size, and tasks. The effects are additive, $$
-\hat\beta_j^{0} = \hat\beta_j + \hat\delta_{j1} + \hat\delta_{j2} + \hat\delta_{j3} + \hat\delta_{j4},
-$$ and because every indirect effect uses the same outcome equation, they do not depend on the order in which the blocks are listed. The ACME, ADE and total effects in Figures 1 and 2 and Table 2 are outputs of the `mediate` function of the mediation package [@tingley2014], estimated from these weighted equations with the index of each block as the mediator and the mean of the 10 plausible values of literacy. They are reported with quasi-Bayesian 95% intervals from `r if (exists("med_info")) format(med_info$sims, big.mark = ",") else "1,000"` draws of the model coefficients. All other standard errors follow the PIAAC design: the 80 replicate weights give the sampling variance, the 10 plausible values give the imputation variance, and the two are combined by Rubin's rule [@oecd2016tech]. Country estimates are summarized by their mean across countries, which preserves the additivity of the effects.
+*Mediation model.* The mediators are the variables in 4 blocks: education, cognitive skills, occupation and employer, and tasks. Following the linear structural equation approach of @imai2010, extended to several mediators by @imai2013, each mediator $M_{im}$ is regressed on the skills and the baseline controls (mediator equations, coefficient $a_{jm}$ on $T_{ij}$), and log wages are regressed on the skills, the controls and all mediators at once (outcome equation, coefficient $b_m$ on $M_{im}$ and $\beta_j$ on $T_{ij}$). The *average causal mediation effect* (ACME) of skill $j$ through block $k$, its indirect effect, is the sum over the mediators in that block of the product of the two coefficients:
+
+$$
+\delta_{jk} = \sum_{m \in k} a_{jm} b_m.
+$$ {#eq-acme}
+
+The coefficient $\beta_j$ is the *average direct effect* (ADE): the effect among workers with comparable education, cognitive skills, occupation, employer sector and establishment size, and tasks. The effects are additive:
+
+$$
+\hat\beta_j^{0} = \hat\beta_j + \hat\delta_{j1} + \hat\delta_{j2} + \hat\delta_{j3} + \hat\delta_{j4}.
+$$ {#eq-additive}
+
+Because every indirect effect uses the same outcome equation, they do not depend on the order in which the blocks are listed. The ACME, ADE and total effects in Figures 1 and 2 and Table 2 are estimated from these weighted equations with the index of each block as the mediator and the mean of the 10 plausible values of literacy. They are reported with quasi-Bayesian 95% intervals from `r if (exists("med_info")) format(med_info$sims, big.mark = ",") else "1,000"` draws of the model coefficients. All other standard errors follow the PIAAC design: the 80 replicate weights give the sampling variance, the 10 plausible values give the imputation variance, and the two are combined by Rubin's rule [@oecd2016tech]. Country estimates are summarized by their mean across countries, which preserves the additivity of the effects.
 
 *Complementarity with skills and job demands.* To the specification with the baseline, education and the literacy quadratic, interactions of each non-cognitive skill with literacy, standardized within country, and with an indicator for tertiary education are added; a positive interaction indicates complements in wages. For job demands, each non-cognitive skill is interacted with the 5 standardized demand measures, controlling for the baseline, education, cognitive skills, and occupation and employer. 5 of the 25 interactions match a non-cognitive skill to the task it is expected to reward; the 20 others are a placebo distribution. The *match premium* is the mean of the matched interactions minus the mean of the mismatched ones, with demand measured from co-workers in 2-digit occupation cells (A, 7 countries) or broad job cells (C), or from the respondent (B). As a positive control, the interaction between assessed numeracy and numeracy use at work is estimated with demand measured from the respondent and from co-workers.
 
@@ -282,7 +285,7 @@ A causal reading of the ACME and ADE requires sequential ignorability [@imai2010
 
 *Measurement of the outcome.* 7 countries release earnings only as deciles. There the dependent variable is the decile (1–10) multiplied by 10, in percentile points of the national earnings distribution, estimated with the same linear specifications. The decile is treated as cardinal because the mediation effects are products and sums of linear coefficients. These estimates are a separate replication on a different outcome scale in 19 countries and are never pooled with the log-wage estimates.
 
-*Unobserved confounding.* Factors that the data do not record may affect a mediator and wages, or a skill and wages. For the mediators, the sensitivity analysis of @imai2010, computed with the `medsens` function of the mediation package, takes the wage-weighted index of each cumulative set of blocks $1, \dots, k$ as a single mediator and recomputes the ACME under an assumed correlation ρ between the errors of the mediator and outcome equations. It gives ρ*, the correlation at which the ACME is zero, and the share of the ACME that remains at ρ = 0.1, 0.2 and 0.3. For the skills, the robustness value of @cinelli2020 measures how much residual variance in wages and in the skill an unobserved confounder would need to explain to reduce a coefficient to zero, with parental education as an observed benchmark (Appendix Figure A2).
+*Unobserved confounding.* Factors that the data do not record may affect a mediator and wages, or a skill and wages. For the mediators, the sensitivity analysis of @imai2010 takes the wage-weighted index of each cumulative set of blocks $1, \dots, k$ as a single mediator and recomputes the ACME under an assumed correlation ρ between the errors of the mediator and outcome equations. It gives ρ*, the correlation at which the ACME is zero, and the share of the ACME that remains at ρ = 0.1, 0.2 and 0.3. For the skills, the robustness value of @cinelli2020 measures how much residual variance in wages and in the skill an unobserved confounder would need to explain to reduce a coefficient to zero, with parental education as an observed benchmark (Appendix Figure A2).
 
 *Reverse causality.* Personality is measured in adulthood together with wages, so schooling and work may have shaped the reported skills, and the data offer no remedy. The sorting regressions include a partial check: if workers select into tasks, the association between a skill and its matched task is present among recent hires and need not grow with tenure, whereas jobs that shape reported personality imply an association that grows with tenure.
 
@@ -299,28 +302,19 @@ ratio_lit <- function(tr) round(100 * yd(paste0("trait|", tr))$estimate / yd("li
 
 Figure 1 shows the total effect to each non-cognitive skill in each country; Appendix Table A2 lists the country estimates. Averaged across the 12 countries, a 1-SD higher score is associated with hourly wages that are `r vcp("seq", "EMOS|M0")` higher for emotional stability, `r vcp("seq", "EXTR|M0")` for extraversion, `r vc("seq", "CONS|M0")` for conscientiousness and `r vc("seq", "OPEM|M0")` for open-mindedness, while agreeableness carries a penalty of `r vc("seq", "AGRE|M0")`. The conscientiousness point estimates are negative, though not significantly so, in `r cons_neg`. The signs agree with the meta-analytic pattern of a conscientiousness premium and an agreeableness penalty [@alderotti2023]. These magnitudes are modest next to the returns to education and cognitive skills: the most rewarded non-cognitive skills are worth about `r ratio_lit("EXTR")` to `r ratio_lit("EMOS")` of the literacy return per SD. With earnings deciles in `r w(K_d)` countries (panel b), the ordering is the same, with a smaller agreeableness penalty.
 
-{{< pagebreak >}}
-
 ```{r}
-#| label: fig-returns
-#| fig-cap: "Total effect of each non-cognitive skill on log wages, by country. Return per SD of each skill from a regression of wages on the 5 skills and the baseline controls, with 95% confidence intervals (black circles: p < .05; gray: p < .10). Diamond: mean of countries with 95% interval. Panels: a, log hourly wages, 12 countries (%); b, earnings decile, 19 countries (percentile points)."
+#| label: returns-fig-data
 fig(stack_panels(
   fig_returns_by_country(res$seq, "M0", xlab = "Total effect per SD of the skill (%)", title = "a. Log hourly wages, 12 countries"),
   fig_returns_by_country(res$d_seq, "M0", xlab = "Total effect per SD of the skill (percentile points)",
                          title = "b. Earnings decile, 19 countries"),
   heights = c(length(countries) + 3, K_d + 3)), "fig1_returns", 6.5, 7.6)
-show_fig("fig1_returns")
 ```
-
-{{< pagebreak >}}
 
 Figure 2 and Table 2 report the indirect effects through each block and the direct effect for each skill (country-level estimates in Appendix Table A3). The education and cognitive-skill channels differ sharply across the 5, and separating them is what reveals the difference. For open-mindedness, both are positive: education contributes `r vcp("ch", "mean|OPEM|education", d = 2)` and cognitive skills `r vcp("ch", "mean|OPEM|cognitive", d = 2)`, together `r share("mean|OPEM|education", "mean|OPEM|total") + share("mean|OPEM|cognitive", "mean|OPEM|total")` of the total effect. For conscientiousness, the 2 indirect effects have opposite signs. Conscientious workers have more education, which contributes `r vc("ch", "mean|CONS|education", d = 2)`, but lower literacy than equally educated peers, which contributes `r vc("ch", "mean|CONS|cognitive", d = 2)`. This is what the personality literature leads one to expect [@poropat2009; @moutafi2004], and it is also a credential effect in the sense of @collins1979: conscientiousness is converted into qualifications more fully than into cognitive skills. A single human-capital block would show an indirect effect close to zero and conceal both. Extraversion has no indirect effect through education and a negative indirect effect through cognitive skills (`r vc("ch", "mean|EXTR|cognitive", d = 2)`); emotional stability contributes through both.
 
-{{< pagebreak >}}
-
 ```{r}
-#| label: fig-channels
-#| fig-cap: "Causal mediation estimates by country: indirect effects of each non-cognitive skill through education, cognitive skills, occupation and employer, and tasks, and the direct effect. Bars to the right of zero raise the return, bars to the left lower it; the effects add up to the total effect (circle). Panel a: log hourly wages, 12 countries (%), with their mean in the bottom row. Panel b: earnings decile (percentile points) for the 7 added countries, with the mean of all 19 in the bottom row."
+#| label: channels-fig-data
 fig(stack_panels(
   fig_channels_by_country(res$ch, title = "a. Log hourly wages, 12 countries",
                           xlab = "Indirect effect per SD of the skill (%); circle = total effect"),
@@ -328,14 +322,10 @@ fig(stack_panels(
                           title = "b. Earnings decile, 7 added countries and mean of 19",
                           xlab = "Indirect effect per SD of the skill (percentile points); circle = total effect"),
   heights = c(length(countries) + 2, length(added_d) + 2)), "fig3_channels", 6.5, 6.6)
-show_fig("fig3_channels")
 ```
 
-{{< pagebreak >}}
-
 ```{r}
-#| label: tbl-channels
-#| tbl-cap: "Causal mediation estimates: average causal mediation effect (ACME) of each non-cognitive skill through education, cognitive skills, occupation and employer, and tasks, average direct effect (ADE), and total effect"
+#| label: channels-tbl-data
 parts_all <- c(total = "Total effect", education = "Education", cognitive = "Cognitive skills",
                job_sorting = "Occupation and employer", tasks = "Tasks", direct = "Direct effect")
 ch_row <- function(tr, pt, stat = "Mean", r = "ch") row_of(r, paste0("mean|", tr, "|", pt), stat)
@@ -357,12 +347,7 @@ tbl_channels <- ltable(rbind(med_grid(est_star), prop_med(), med_grid(est_star, 
        panels = c("A. Log hourly wages, mean of 12 countries (%)" = 1,
                   "B. Earnings decile, mean of 19 countries (percentile points)" = 8),
        tabcolsep = 4, notes = notes_ch)
-tbl_channels
 ```
-
-`r table_notes(notes_ch)`
-
-{{< pagebreak >}}
 
 In the occupational channels, sorting by occupation and employer adds `r vcp("ch", "mean|OPEM|job_sorting", d = 2)` for open-mindedness and about 0.5% for conscientiousness and emotional stability; it is small for extraversion and absent for agreeableness. Sorting contributes [@cobbclark2011], but it is not the main channel for any of the 5. The indirect effect through tasks is concentrated where the task literature would place it: for extraversion it is `r vc("ch", "mean|EXTR|tasks", d = 2)`, positive in every country and significant in `r w(npos("ch", "mean|EXTR|tasks"))`, because extraverted workers perform more of the interpersonal tasks that are paid [@deming2017], and they do so within broad occupations [@autor2013]. Open-mindedness has a indirect effect through tasks of similar size (`r vc("ch", "mean|OPEM|tasks", d = 2)`).
 
@@ -370,18 +355,12 @@ The direct effect, the return among workers with comparable education, cognitive
 
 In the decile sample the mediation estimates give the same picture (Figure 2, panel b; Table 2, Panel B; Appendix Tables A4 and A5), except that the indirect effect through cognitive skills of conscientiousness is smaller, with an interval that includes zero (`r vc("d_ch", "mean|CONS|cognitive", d = 2)`), so this part of the result is less conclusive.
 
-Figure 3 shows how the estimated indirect effects change when unobserved factors affect both the mediators and wages. Family connections, for example, could influence education and earnings. Some of the estimated indirect effect through education could then reflect those connections. Panel a shows the error correlation ρ* at which each cumulative indirect effect reaches zero, as computed by `medsens`. Panel b shows the share remaining as the assumed correlation increases. Correlations of 0.1, 0.2 and 0.3 are sensitivity scenarios [@imai2010]. The indirect effect through education reaches zero at `r f(rs(1), 2)`, while the combined indirect effect through all 4 blocks reaches zero at `r f(rs(4), 2)`. At a correlation of 0.2, `r surv(1, 0.2)`% of the indirect effect through education and `r surv(4, 0.2)`% of the combined indirect effect remain. At 0.3, the corresponding shares are `r surv(1, 0.3)`% and `r surv(4, 0.3)`%. The lowest country thresholds are `r f(rmin(1), 2)` and `r f(rmin(4), 2)` (panel a). These calculations bound the confounding of the mediators that the indirect effects withstand; they do not test sequential ignorability. The robustness values for the direct effects are in Appendix Figure A2.
-
-{{< pagebreak >}}
+Figure 3 shows how the estimated indirect effects change when unobserved factors affect both the mediators and wages. Family connections, for example, could influence education and earnings. Some of the estimated indirect effect through education could then reflect those connections. Panel a shows the error correlation ρ* at which each cumulative indirect effect reaches zero. Panel b shows the share remaining as the assumed correlation increases. Correlations of 0.1, 0.2 and 0.3 are sensitivity scenarios [@imai2010]. The indirect effect through education reaches zero at `r f(rs(1), 2)`, while the combined indirect effect through all 4 blocks reaches zero at `r f(rs(4), 2)`. At a correlation of 0.2, `r surv(1, 0.2)`% of the indirect effect through education and `r surv(4, 0.2)`% of the combined indirect effect remain. At 0.3, the corresponding shares are `r surv(1, 0.3)`% and `r surv(4, 0.3)`%. The lowest country thresholds are `r f(rmin(1), 2)` and `r f(rmin(4), 2)` (panel a). These calculations bound the confounding of the mediators that the indirect effects withstand; they do not test sequential ignorability. The robustness values for the direct effects are in Appendix Figure A2.
 
 ```{r}
-#| label: fig-sensitivity
-#| fig-cap: "Sensitivity of the mediation estimates to unobserved confounding of the mediators, from medsens. Panel a: ρ*, the correlation between the errors of the mediator and wage equations at which the ACME through the listed blocks is zero (Imai, Keele, and Yamamoto, 2010), by country; diamond: mean of countries; dashed lines mark correlations of 0.1, 0.2 and 0.3. Panel b: share of each cumulative ACME that remains under an assumed correlation ρ, mean of 12 countries (line) and range across countries (band)."
+#| label: sensitivity-fig-data
 fig(fig_channel_sensitivity(res$rho, sens = res$sens), "fig3_channel_sensitivity", 6.5, 5.4)
-show_fig("fig3_channel_sensitivity")
 ```
-
-{{< pagebreak >}}
 
 ## Complementarity with skills and job demands
 
@@ -396,20 +375,13 @@ sc_se_lit <- 100 * max(sc_mean$se[grepl("literacy", sc_mean$term)])
 
 Figure 4 and Panels A and B of Table 3 report the interactions of each non-cognitive skill with literacy and with tertiary education. Of the `r w(length(sc_terms))` mean interactions, `r w(sc_clear)` `r if (sc_clear <= 1) "has" else "have"` a 95% interval that excludes zero, and country estimates rarely differ from zero either. The point estimates lean toward complementarity for conscientiousness (`r vcp("sc", "CONS|x_literacy", d = 2)` per SD of literacy) and toward substitution for open-mindedness with tertiary education (`r vcp("sc", "OPEM|x_tertiary", d = 2)`), and they exclude interactions with literacy larger than about `r f(2.8 * sc_se_lit, 1)` in the average country. Neither the growing complementarity between cognitive and social skills documented for the United States [@deming2017] nor the substitution reading [@lindqvist2011] appears clearly in these labor markets, although interactions with 3-item scales are strongly attenuated by measurement error.
 
-{{< pagebreak >}}
-
 ```{r}
-#| label: fig-skills
-#| fig-cap: "Does the return to a non-cognitive skill rise with literacy or tertiary education? Interaction estimates by country: skill × literacy (panel a, per SD) and skill × tertiary education (panel b), 12 countries (%). Circles are countries (black: p < .05; gray: p < .10); the diamond is the mean of countries with its 95% interval. Horizontal scales differ between panels."
+#| label: skills-fig-data
 fig(fig_skills_complementarity(res$sc, unit = "%"), "fig4_skills_complementarity", 6.5, 5.4)
-show_fig("fig4_skills_complementarity")
 ```
 
-{{< pagebreak >}}
-
 ```{r}
-#| label: tbl-compl
-#| tbl-cap: "Does the return to a non-cognitive skill depend on literacy, tertiary education, or job demands? Interaction estimates (%; earnings decile in percentile points)"
+#| label: compl-tbl-data
 specs <- list(
   c("Extraversion", "sc", "EXTR|x_literacy"), c("Conscientiousness", "sc", "CONS|x_literacy"),
   c("Open-mindedness", "sc", "OPEM|x_literacy"), c("Emotional stability", "sc", "EMOS|x_literacy"),
@@ -441,33 +413,20 @@ tbl_compl <- ltable(data.frame(sapply(specs, `[`, 1),
        panels = c("A. Non-cognitive skill × literacy (per SD)" = 1, "B. Non-cognitive skill × tertiary education" = 6,
                   "C. Job demands: interaction per SD of skill per SD of demand" = 11),
        notes = notes_compl)
-tbl_compl
 ```
-
-`r table_notes(notes_compl)`
-
-{{< pagebreak >}}
 
 Panel C of Table 3 and Figure 5 turn to job demands, beginning with the positive control. When numeracy use is taken from the respondent's own report, the interaction between assessed numeracy and numeracy use is `r vcp("pc", "own_full", d = 2)` and significant in only `r w(npos("pc", "own_full"))` countries. When the same demand is measured from co-workers, it is `r vc("pc", "cell_full", d = 2)`, positive in `r w(row_of("pc", "cell_full")$n_same_sign)` countries and significant in `r w(npos("pc", "cell_full"))`. The design therefore recovers the complementarity between a skill and its use, provided the demand is measured independently of the respondent [@nizalova2016].
 
-{{< pagebreak >}}
-
 ```{r}
-#| label: fig-premium
-#| fig-cap: "Match premium: is the return to a skill higher in jobs that demand it? Matched minus mismatched skill × demand interactions and the numeracy positive control, by country. The match premium is the mean of the 5 matched skill × demand interactions minus the mean of the 20 mismatched ones; the positive control is the interaction between assessed numeracy and numeracy use. Panel a: log hourly wages, 12 countries (measure A in 7). Panel b: earnings decile, 19 countries (measure A in 12). Marks as in Figure 1."
+#| label: premium-fig-data
 mp_set <- function(p) list(A = res[[paste0(p, "A")]], C = res[[paste0(p, "C")]], B = res[[paste0(p, "B")]])
 fig(stack_panels(
   fig_premium_by_country(mp_set(""), res$pc, unit = "%", title = "a. Log hourly wages, 12 countries"),
   fig_premium_by_country(mp_set("d_"), res$d_pc, pp, title = "b. Earnings decile, 19 countries"),
   heights = c(length(countries) + 3, K_d + 3)), "fig5_premium", 6.5, 7.8)
-show_fig("fig5_premium")
 ```
 
-{{< pagebreak >}}
-
 The match premium is not distinguishable from zero with co-worker measures of job demands. It is `r vcp("A", "match_premium", d = 2)` with 2-digit occupation cells (measure A) and `r vcp("C", "match_premium", d = 2)` with broad job cells (measure C). No country estimate differs significantly from zero. With own reports (measure B), it is `r vc("B", "match_premium", d = 2)`. None of the 5 matched interactions is positive in the mean under any measure, with or without job controls (Figure 6 and Appendix Table A6). The positive control detects a numeracy premium using the same co-worker measures. The estimated minimum detectable match premium is about `r mde("A", "match_premium")` at 80% power. The results qualify the expectation that interpersonal skills command higher wages in jobs that require them [@borghans2008; @deming2017]. This cross-sectional interaction estimates variation in the wage association across jobs. Differences in productivity are a separate question [@heckman1985].
-
-{{< pagebreak >}}
 
 ```{r}
 #| label: hm-data
@@ -480,20 +439,14 @@ hm_note <- if (hm_n_clear == 0) "None of the 50 mean interactions has a 95% inte
 ```
 
 ```{r}
-#| label: fig-interactions
-#| fig-cap: !expr 'paste("All 25 skill × job-demand interaction estimates: does the return to each non-cognitive skill change with the demand for each task? Mean of country estimates (% per SD of the non-cognitive skill per SD of demand). Outlined cells are the 5 matched pairs.", hm_note, "Panel a uses co-worker demand in two-digit occupation cells with occupation fixed effects (7 countries); panel b uses co-worker demand in broad job cells (12 countries).")'
+#| label: interactions-fig-data
 p_hm <- (fig_interaction_heatmap(res$A, "a. Co-worker demand, two-digit occupation cells (7 countries)", lim = 2, unit = "%") /
          fig_interaction_heatmap(res$C, "b. Co-worker demand, broad job cells (12 countries)", lim = 2, unit = "%")) +
   patchwork::plot_layout(guides = "collect") & theme(legend.position = "right")
 fig(p_hm, "fig6_interactions", 6.5, 5.6)
-show_fig("fig6_interactions")
 ```
 
-{{< pagebreak >}}
-
 In the decile sample, the job-demand results are unchanged: the positive control succeeds with co-worker demand (`r vc("d_pc", "cell_full", d = 2)` percentile points) and fails with own reports, and the match premium is indistinguishable from zero with co-worker demand (`r vc("d_A", "match_premium", d = 2)` with measure A; `r vc("d_C", "match_premium", d = 2)` with measure C). 2 of the 10 interactions with literacy and education are significant there, conscientiousness × literacy and open-mindedness × tertiary education, both with the signs of the 12-country point estimates; they are consistent with the main estimates but do not by themselves establish complementarity or substitution.
-
-{{< pagebreak >}}
 
 ## Sorting into tasks
 
@@ -506,23 +459,14 @@ tenure_k <- row_of("tenure", "EXTR|x_tenure")$k
 ```
 
 ```{r}
-#| label: fig-alloc
-#| fig-cap: "Do workers with a non-cognitive skill perform its matched task? Association between each skill and its matched task, 12 countries, conditional on the other 4, the baseline, education, and the literacy quadratic. Panel a: own report (0–1 index × 100). Panel b: co-worker demand in the job cell (SD × 100). Marks as in Figure 1; horizontal scales differ between panels."
+#| label: alloc-fig-data
 fig(fig_allocation(res$own, res$cell), "fig6_allocation", 6.5, 5.4)
-show_fig("fig6_allocation")
 ```
-
-{{< pagebreak >}}
 
 Workers perform tasks associated with their non-cognitive skills (Figure 7; Table 4). A 1-SD higher extraversion score is associated with an influencing index that is `r vc("own", "EXTR|alloc", d = 1)` points higher on the 0–100 scale, significant in every country. Open-mindedness is associated with more learning (`r vc("own", "OPEM|alloc", d = 1)`). The associations for extraversion and open-mindedness also appear in co-worker measures. Extraverted workers hold jobs that co-workers describe as influence-intensive (`r vc("cell", "EXTR|alloc", d = 1)` hundredths of an SD). Open-minded workers hold jobs described as learning-intensive (`r vc("cell", "OPEM|alloc", d = 1)`). These associations remain after adjustment for job characteristics and are consistent with selection by comparative advantage [@autor2013].
 
-```{=openxml}
-<w:p><w:pPr><w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1247" w:bottom="1417" w:left="1247" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:pPr></w:p>
-```
-
 ```{r}
-#| label: tbl-alloc
-#| tbl-cap: "Do workers with a non-cognitive skill perform its matched task? Sorting regressions: association between each skill and its matched task, by measure"
+#| label: alloc-tbl-data
 al_cols <- list(c("own", "|alloc", 100), c("job", "|alloc", 100), c("cell", "|alloc", 100),
                 c("tenure", "|x_tenure", 1000), c("d_own", "|alloc", 100), c("d_cell", "|alloc", 100))
 al_grid <- function(fun) do.call(rbind, lapply(trait_names, function(tr)
@@ -539,13 +483,6 @@ tbl_alloc <- ltable(rbind(al_grid(function(x, s) est_star(x, 2, s)), al_grid(fun
        panels = c("A. Mean of countries (standard error)" = 1,
                   "B. Number of countries with the 95% interval above / below zero" = 6),
        notes = notes_alloc)
-tbl_alloc
-```
-
-`r table_notes(notes_alloc)`
-
-```{=openxml}
-<w:p><w:pPr><w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="1247" w:right="1417" w:bottom="1247" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:pPr></w:p>
 ```
 
 Emotionally stable workers report less time pressure (`r vc("own", "EMOS|alloc", d = 1)`; negative in `r w(nneg("own", "EMOS|alloc"))` countries). Co-worker reports do not indicate less pressured jobs (`r vc("cell", "EMOS|alloc", d = 1)`). This difference is consistent with appraisal theory [@spector2000] and suggests that perception contributes to the own-report association. The trait–task associations do not differ detectably with tenure. Across the `r w(tenure_k)` countries that release the start year of the current job, the largest mean interaction with tenure is `r f(1000 * tn_max, 1)` points per decade on the 0–100 scale. None differs significantly from zero. The presence of these associations among recent hires is more consistent with selection than with a gradual change in personality during the current job [@roberts2005]. It also accords with evidence of personality stability during working age [@cobbclark2012]. The decile sample shows the same pattern.
@@ -615,3 +552,103 @@ The mediation estimates distinguish the part of each return that runs through qu
 
 ::: {#refs}
 :::
+
+{{< pagebreak >}}
+
+```{r}
+#| label: tbl-desc
+#| tbl-cap: "Descriptive statistics of the analysis sample by country (12 countries, weighted)"
+tbl_desc
+```
+
+`r table_notes(notes_desc)`
+
+{{< pagebreak >}}
+
+```{r}
+#| label: tbl-channels
+#| tbl-cap: "Causal mediation estimates: average causal mediation effect (ACME) of each non-cognitive skill through education, cognitive skills, occupation and employer, and tasks, average direct effect (ADE), and total effect"
+tbl_channels
+```
+
+`r table_notes(notes_ch)`
+
+{{< pagebreak >}}
+
+```{r}
+#| label: tbl-compl
+#| tbl-cap: "Does the return to a non-cognitive skill depend on literacy, tertiary education, or job demands? Interaction estimates (%; earnings decile in percentile points)"
+tbl_compl
+```
+
+`r table_notes(notes_compl)`
+
+```{=openxml}
+<w:p><w:pPr><w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1247" w:bottom="1417" w:left="1247" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:pPr></w:p>
+```
+
+```{r}
+#| label: tbl-alloc
+#| tbl-cap: "Do workers with a non-cognitive skill perform its matched task? Sorting regressions: association between each skill and its matched task, by measure"
+tbl_alloc
+```
+
+`r table_notes(notes_alloc)`
+
+```{=openxml}
+<w:p><w:pPr><w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="1247" w:right="1417" w:bottom="1247" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:pPr></w:p>
+```
+
+```{r}
+#| label: fig-returns
+#| fig-cap: "Total effect of each non-cognitive skill on log wages, by country. Return per SD of each skill from a regression of wages on the 5 skills and the baseline controls, with 95% confidence intervals (black circles: p < .05; gray: p < .10). Diamond: mean of countries with 95% interval. Panels: a, log hourly wages, 12 countries (%); b, earnings decile, 19 countries (percentile points)."
+show_fig("fig1_returns")
+```
+
+{{< pagebreak >}}
+
+```{r}
+#| label: fig-channels
+#| fig-cap: "Causal mediation estimates by country: indirect effects of each non-cognitive skill through education, cognitive skills, occupation and employer, and tasks, and the direct effect. Bars to the right of zero raise the return, bars to the left lower it; the effects add up to the total effect (circle). Panel a: log hourly wages, 12 countries (%), with their mean in the bottom row. Panel b: earnings decile (percentile points) for the 7 added countries, with the mean of all 19 in the bottom row."
+show_fig("fig3_channels")
+```
+
+{{< pagebreak >}}
+
+```{r}
+#| label: fig-sensitivity
+#| fig-cap: "Sensitivity of the mediation estimates to unobserved confounding of the mediators, from medsens. Panel a: ρ*, the correlation between the errors of the mediator and wage equations at which the ACME through the listed blocks is zero (Imai, Keele, and Yamamoto, 2010), by country; diamond: mean of countries; dashed lines mark correlations of 0.1, 0.2 and 0.3. Panel b: share of each cumulative ACME that remains under an assumed correlation ρ, mean of 12 countries (line) and range across countries (band)."
+show_fig("fig3_channel_sensitivity")
+```
+
+{{< pagebreak >}}
+
+```{r}
+#| label: fig-skills
+#| fig-cap: "Does the return to a non-cognitive skill rise with literacy or tertiary education? Interaction estimates by country: skill × literacy (panel a, per SD) and skill × tertiary education (panel b), 12 countries (%). Circles are countries (black: p < .05; gray: p < .10); the diamond is the mean of countries with its 95% interval. Horizontal scales differ between panels."
+show_fig("fig4_skills_complementarity")
+```
+
+{{< pagebreak >}}
+
+```{r}
+#| label: fig-premium
+#| fig-cap: "Match premium: is the return to a skill higher in jobs that demand it? Matched minus mismatched skill × demand interactions and the numeracy positive control, by country. The match premium is the mean of the 5 matched skill × demand interactions minus the mean of the 20 mismatched ones; the positive control is the interaction between assessed numeracy and numeracy use. Panel a: log hourly wages, 12 countries (measure A in 7). Panel b: earnings decile, 19 countries (measure A in 12). Marks as in Figure 1."
+show_fig("fig5_premium")
+```
+
+{{< pagebreak >}}
+
+```{r}
+#| label: fig-interactions
+#| fig-cap: !expr 'paste("All 25 skill × job-demand interaction estimates: does the return to each non-cognitive skill change with the demand for each task? Mean of country estimates (% per SD of the non-cognitive skill per SD of demand). Outlined cells are the 5 matched pairs.", hm_note, "Panel a uses co-worker demand in two-digit occupation cells with occupation fixed effects (7 countries); panel b uses co-worker demand in broad job cells (12 countries).")'
+show_fig("fig6_interactions")
+```
+
+{{< pagebreak >}}
+
+```{r}
+#| label: fig-alloc
+#| fig-cap: "Do workers with a non-cognitive skill perform its matched task? Association between each skill and its matched task, 12 countries, conditional on the other 4, the baseline, education, and the literacy quadratic. Panel a: own report (0–1 index × 100). Panel b: co-worker demand in the job cell (SD × 100). Marks as in Figure 1; horizontal scales differ between panels."
+show_fig("fig6_allocation")
+```
