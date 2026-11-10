@@ -4,7 +4,7 @@ subtitle: "Do they arise through education, job sorting, or work tasks?"
 # Main document (anonymous, as submitted). Rendered by `make render`; every number is read from
 # the results written by the pipeline in R/. Title page and author details are not part of this file.
 abstract: |
-  Personality predicts pay, but the association may run through education acquired before employment or through the jobs workers later hold. This study estimates a causal mediation model of the return to each non-cognitive skill among 39,559 employees in 19 high-income countries, with education, cognitive skills, occupation and employer, and job tasks as mediators, and tests its sensitivity to unobserved confounding. Education and cognitive skills mediate much of the open-mindedness premium. Most of the emotional-stability and extraversion premia and the agreeableness penalty are direct effects within jobs. Workers sort into tasks that match their skills without a detectable match premium.
+  Personality predicts pay, but the association may run through schooling or through the jobs workers hold. Using PIAAC data on 39,559 employees in 19 high-income countries, this study estimates a causal mediation model of the return to each non-cognitive skill, with education, cognitive skills, occupation and employer, and job tasks as mediators, and tests its sensitivity to unobserved confounding. Education and cognitive skills mediate much of the open-mindedness premium. Most of the emotional-stability and extraversion premia and the agreeableness penalty are direct effects within jobs. Workers sort into tasks that match their skills without a detectable match premium.
 keywords:
   - non-cognitive skills
   - personality
