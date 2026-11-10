@@ -1,0 +1,20 @@
+"country","name","n","ve_method","n_reps","continuous","has_occupation2","has_tenure","has_long_scales"
+"BEL","Belgium (Flanders)",1577,"fay",80,FALSE,TRUE,TRUE,FALSE
+"CAN","Canada",4823,"fay",80,FALSE,FALSE,FALSE,TRUE
+"CHL","Chile",1522,"fay",28,TRUE,TRUE,TRUE,TRUE
+"CZE","Czechia",2075,"fay",80,TRUE,TRUE,TRUE,TRUE
+"ESP","Spain",2282,"fay",80,TRUE,TRUE,TRUE,TRUE
+"EST","Estonia",2738,"fay",80,TRUE,FALSE,FALSE,TRUE
+"FRA","France",2380,"jk2",80,TRUE,TRUE,TRUE,FALSE
+"GBR","England (UK)",2183,"fay",80,FALSE,FALSE,FALSE,FALSE
+"HRV","Croatia",1363,"fay",80,TRUE,FALSE,TRUE,TRUE
+"HUN","Hungary",2014,"fay",80,FALSE,TRUE,FALSE,FALSE
+"IRL","Ireland",1774,"fay",80,TRUE,FALSE,TRUE,FALSE
+"ITA","Italy",1262,"fay",80,TRUE,TRUE,TRUE,TRUE
+"KOR","Korea",2381,"fay",80,FALSE,TRUE,TRUE,TRUE
+"LTU","Lithuania",2021,"fay",80,TRUE,FALSE,TRUE,FALSE
+"LVA","Latvia",2300,"fay",80,TRUE,TRUE,TRUE,FALSE
+"NZL","New Zealand",1812,"fay",80,TRUE,FALSE,TRUE,TRUE
+"POL","Poland",1458,"fay",80,TRUE,TRUE,TRUE,FALSE
+"PRT","Portugal",1234,"fay",52,FALSE,TRUE,FALSE,TRUE
+"SGP","Singapore",2360,"fay",80,FALSE,TRUE,TRUE,FALSE

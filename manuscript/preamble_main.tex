@@ -1,0 +1,34 @@
+% Preamble for the PDF version of the article (Quarto + XeLaTeX).
+\usepackage{setspace}
+\setstretch{1.0}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{pdflscape}
+\usepackage{caption}
+\captionsetup{font=small, labelfont=bf, labelsep=colon, justification=raggedright, singlelinecheck=false}
+\captionsetup[table]{position=top, skip=4pt}
+\captionsetup[longtable]{margin=0pt}
+\usepackage{unicode-math}
+\setmathfont{TeX Gyre Termes Math}
+\usepackage{etoolbox}
+% Tables: single-spaced footnote size; longtables span the text width.
+\AtBeginEnvironment{longtable}{\footnotesize\setstretch{1.0}}
+\setlength{\LTcapwidth}{\linewidth}
+\setlength{\LTleft}{0pt}
+\setlength{\LTright}{0pt}
+\setlength{\LTpost}{3pt}
+% Floats: prefer "here", allow larger floats on text pages, fewer float-only pages.
+\makeatletter
+\def\fps@table{!htbp}
+\def\fps@figure{!htbp}
+\makeatother
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
+\raggedbottom
+% Reference list: APA, hanging indent, tight spacing.
+\AtBeginDocument{\ifdefined\cslhangindent\setlength{\cslhangindent}{1.5em}\fi}

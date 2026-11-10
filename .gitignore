@@ -1,0 +1,13 @@
+# PIAAC public-use files (download from the OECD, see README.md) and the data built from them
+data/raw/
+data/derived/
+data/derived_decile/
+# rendered documents and figures (make render)
+output/
+manuscript/packages.bib
+manuscript/*_files/
+manuscript/.quarto/
+.quarto/
+.Rhistory
+.Rproj.user
+.DS_Store
