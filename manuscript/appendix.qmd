@@ -93,7 +93,6 @@ res <- c(res, list(
   d_own = RD("alloc_own", FALSE), d_cell = RD("alloc_cell", FALSE)))
 res$d_seq <- med_seq(res$d_ch)
 med_info <- M("run_info")
-res$des <- R("art_mediation_design"); res$d_des <- RD("mediation_design")   # design-based inference
 flow <- utils::read.csv(file.path(paper, "results", "sample_flow.csv"))
 countries <- names(res$seq)
 K <- length(countries)
@@ -167,7 +166,7 @@ fig <- function(p, name, width = 6.5, height = 4) {
 
 *Returns to non-cognitive skills: Do they arise through education, job sorting, or work tasks?*
 
-This appendix accompanies the study. Section A reports the sample construction (Table A1); Section B the total, indirect and direct effects for every country, for log hourly wages in the 12 main countries and for the earnings decile in the 19 countries of the decile sample (Tables A2–A5); Section C the skill × job-demand interactions under 3 demand measures and the sensitivity of the mediation estimates to the occupation and sector block and to design-based inference (Tables A6 to A8); Section D the robustness checks summarized in the study (Figures A1 and A2) and the indirect effect through industry split by industry (Figure A3). Significance marks (\* p < 0.10, \*\* p < 0.05, \*\*\* p < 0.01) and all definitions follow the study.
+This appendix accompanies the study. Section A reports the sample construction (Table A1); Section B the total, indirect and direct effects for every country, for log hourly wages in the 12 main countries and for the earnings decile in the 19 countries of the decile sample (Tables A2–A5); Section C the skill × job-demand interactions under 3 demand measures and the sensitivity of the mediation estimates to the occupation and sector block (Tables A6 and A7); Section D the robustness checks summarized in the study (Figures A1 and A2) and the indirect effect through industry split by industry (Figure A3). Significance marks (\* p < 0.10, \*\* p < 0.05, \*\*\* p < 0.01) and all definitions follow the study.
 
 # A. Sample construction
 
@@ -345,29 +344,6 @@ ltable(rbind(sens_grid(function(x) f(100 * x$estimate, 2), "job_sorting"),
 ```{=latex}
 \FloatBarrier
 ```
-
-
-```{r}
-#| label: tbl-s12
-#| tbl-cap: "Mediation effects with design-based standard errors (log wages in %; earnings decile in percentile points)"
-des_rows <- c(education = "ACME: education", cognitive = "ACME: cognitive skills",
-              experience = "ACME: experience and tenure", job_sorting = "ACME: occupation and sector",
-              industry = "ACME: industry", tasks = "ACME: tasks", direct = "ADE: direct effect", total = "Total effect")
-des_cell <- function(r, tr, pt) { x <- country_and_summary(res[[r]], paste0("mean|", tr, "|", pt)); x[x$country == "Mean", ] }
-des_grid <- function(fun, r, m) do.call(rbind, lapply(names(des_rows), function(pt)
-  c(des_rows[[pt]], sapply(trait_names, function(tr) fun(des_cell(r, tr, pt), des_cell(m, tr, pt))))))
-se_two <- function(x, y) paste0("(", f(100 * x$se, 2), "; ", f(100 * y$se, 2), ")")
-se_ratio <- local({ a <- unlist(lapply(names(res$des), function(cc) res$ch[[cc]]$se[match(res$des[[cc]]$term, res$ch[[cc]]$term)] / res$des[[cc]]$se)); stats::median(a, na.rm = TRUE) })
-notes_des <- paste0("*Notes:* The same linear mediation effects as in Table 2, re-estimated with design-based inference: the 80 replicate weights and the 10 plausible values of literacy, with the wage coefficients that weight each block index re-estimated in every replicate. Cells are the mean of the country estimates; in parentheses, the design-based standard error followed by the standard error from mediate, which takes the indices as given. Point estimates average the 10 plausible values and can differ slightly from Table 2, which uses their mean. The median ratio of the mediate to the design-based standard error across countries and effects is ", f(se_ratio, 2), ". ", stars_note)
-ltable(rbind(des_grid(function(x, y) est_star(x), "des", "ch"), des_grid(function(x, y) est_star(x), "d_des", "d_ch")),
-       sub = rbind(des_grid(se_two, "des", "ch"), des_grid(se_two, "d_des", "d_ch")),
-       header = c("", "Extraversion", "Conscientiousness", "Open-\nmindedness", "Emotional\nstability", "Agreeableness"),
-       align = "lccccc",
-       panels = c("A. Log hourly wages, mean of 12 countries" = 1, "B. Earnings decile, mean of 19 countries" = 9),
-       tabcolsep = 4, notes = notes_des)
-```
-
-`r table_notes(notes_des)`
 
 # D. Robustness
 

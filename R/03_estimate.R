@@ -59,9 +59,6 @@ cached("mp_nojob_B",   rc(with_cell_demand(all_pairs_nojob_estimator("_z"))))
 cached("mp_nojob_A",   rc(with_cell_demand(all_pairs_nojob_estimator("_d")), countries = A_countries))
 
 # ---- sorting into tasks (Figure 7, Table 4) -------------------------------------------------
-# ---- design-based standard errors for the mediation effects (Appendix Table A8) ---------------
-cached("mediation_design", rc(mediation_design_estimator()))
-
 cached("alloc_own",    rc(allocation_estimator()))
 cached("alloc_cell",   rc(with_cell_demand(allocation_estimator(suffix = "_c"))))
 

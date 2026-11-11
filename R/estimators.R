@@ -416,28 +416,3 @@ industry_split_estimator <- function(b = blocks4) {
     out
   }
 }
-
-# ---- design-based inference for the mediation effects ---------------------------------------------
-# The same linear mediation effects as R/04_mediation.R, written as a fun(d, w) estimator so that
-# with_uncertainty() re-estimates everything, including the wage coefficients that weight each
-# block index, in every replicate and for every plausible value. With the index H_k = X_k beta_k
-# as mediator, the outcome coefficient on H_k is 1, so the indirect effect through block k is the
-# coefficient on the skill in the regression of H_k on the baseline. Used as a check on mediate()'s
-# quasi-Bayesian intervals, which treat the indices as data (Appendix Table A8).
-mediation_design_estimator <- function(b = blocks4) {
-  rhs <- paste(c(base_rhs, unlist(b)), collapse = " + ")
-  function(d, w) {
-    d <- complete_for(d, rhs, c("log_wage", w)); d$.w <- d[[w]]
-    m <- wls(paste("log_wage ~", rhs), d)
-    X <- stats::model.matrix(m); beta <- stats::coef(m); beta[is.na(beta)] <- 0
-    tl <- attr(stats::terms(m), "term.labels"); asg <- attr(X, "assign")
-    out <- stats::setNames(stats::coef(wls(paste("log_wage ~", base_rhs), d))[trait_names], paste0("mean|", trait_names, "|total"))
-    out <- c(out, stats::setNames(beta[trait_names], paste0("mean|", trait_names, "|direct")))
-    for (k in names(b)) {
-      cols <- which(asg > 0 & tl[pmax(asg, 1)] %in% b[[k]])
-      d$.H <- drop(X[, cols, drop = FALSE] %*% beta[cols])
-      out <- c(out, stats::setNames(stats::coef(wls(paste(".H ~", base_rhs), d))[trait_names], paste0("mean|", trait_names, "|", k)))
-    }
-    out
-  }
-}
