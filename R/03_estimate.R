@@ -59,6 +59,9 @@ cached("mp_nojob_B",   rc(with_cell_demand(all_pairs_nojob_estimator("_z"))))
 cached("mp_nojob_A",   rc(with_cell_demand(all_pairs_nojob_estimator("_d")), countries = A_countries))
 
 # ---- sorting into tasks (Figure 7, Table 4) -------------------------------------------------
+# ---- design-based standard errors for the mediation effects (Appendix Table A8) ---------------
+cached("mediation_design", rc(mediation_design_estimator()))
+
 cached("alloc_own",    rc(allocation_estimator()))
 cached("alloc_cell",   rc(with_cell_demand(allocation_estimator(suffix = "_c"))))
 
@@ -83,5 +86,6 @@ if (variant == "main") {
   cached("industry_split", run_countries(country_list, industry_split_estimator(), n_pv = 10, reps_on_pv = 1))
   # ---- robustness values of the direct effects (Cinelli and Hazlett 2020; Appendix Figure A2) ----
   cached("rv_M1",         rc(robustness_value_estimator(rhs_hc)), prefix = "")
+  cached("rv_full",       rc(robustness_value_estimator(rhs_upto(6))), prefix = "")   # full direct-effect model
 }
 message("Estimates written to ", results_dir)

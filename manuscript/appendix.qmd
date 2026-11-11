@@ -79,7 +79,7 @@ med_seq <- function(ch) lapply(ch, function(r) do.call(rbind, lapply(c(total = "
              estimate = x$estimate, se = x$se, stringsAsFactors = FALSE) })))
 res <- list(
   ch = M("art_channels"), rho = M("art_rho"), sens = M("med_sens_grid"), ind = R("art_industry_split"),
-  yard = R("art_yardstick"), rv1 = R("rv_M1"),
+  yard = R("art_yardstick"), rv1 = R("rv_full"),
   sc = R("art_skills_compl"), pc = R("art_pc_variants"),
   A = R("art_mp_A"), B = R("art_mp_B"), C = R("art_mp_C"), A0 = R("art_mp_nojob_A"), B0 = R("art_mp_nojob_B"),
   own = R("art_alloc_own"), job = R("art_alloc_job"), cell = R("art_alloc_cell"), tenure = R("art_alloc_tenure"),
@@ -93,6 +93,7 @@ res <- c(res, list(
   d_own = RD("alloc_own", FALSE), d_cell = RD("alloc_cell", FALSE)))
 res$d_seq <- med_seq(res$d_ch)
 med_info <- M("run_info")
+res$des <- R("art_mediation_design"); res$d_des <- RD("mediation_design")   # design-based inference
 flow <- utils::read.csv(file.path(paper, "results", "sample_flow.csv"))
 countries <- names(res$seq)
 K <- length(countries)
@@ -166,7 +167,7 @@ fig <- function(p, name, width = 6.5, height = 4) {
 
 *Returns to non-cognitive skills: Do they arise through education, job sorting, or work tasks?*
 
-This appendix accompanies the study. Section A reports the sample construction (Table A1); Section B the total, indirect and direct effects for every country, for log hourly wages in the 12 main countries and for the earnings decile in the 19 countries of the decile sample (Tables A2–A5); Section C the skill × job-demand interactions under 3 demand measures and the sensitivity of the mediation estimates to the occupation and sector block (Tables A6 and A7); Section D the robustness checks summarized in the study (Figures A1 and A2) and the indirect effect through industry split by industry (Figure A3). Significance marks (\* p < 0.10, \*\* p < 0.05, \*\*\* p < 0.01) and all definitions follow the study.
+This appendix accompanies the study. Section A reports the sample construction (Table A1); Section B the total, indirect and direct effects for every country, for log hourly wages in the 12 main countries and for the earnings decile in the 19 countries of the decile sample (Tables A2–A5); Section C the skill × job-demand interactions under 3 demand measures and the sensitivity of the mediation estimates to the occupation and sector block and to design-based inference (Tables A6 to A8); Section D the robustness checks summarized in the study (Figures A1 and A2) and the indirect effect through industry split by industry (Figure A3). Significance marks (\* p < 0.10, \*\* p < 0.05, \*\*\* p < 0.01) and all definitions follow the study.
 
 # A. Sample construction
 
@@ -302,7 +303,8 @@ notes_pairs <- paste("*Notes:* Interaction between each non-cognitive skill and 
   "occupation cells with two-digit occupation fixed effects (7 countries). C: co-worker demand",
   "in broad job cells. B: the respondent's own report. Job controls: experience and tenure, occupation group, sector,",
   "establishment size, and industry (two-digit occupations for A). The match premium is the mean of the 5",
-  "matched interactions minus the mean of the 20 mismatched ones.",
+  "matched interactions minus the mean of the 20 mismatched ones. Co-worker cells need at least 15",
+  "respondents; broad job cells fall back from occupation × sector × establishment size to occupation × sector and then to occupation.",
   stars_note)
 ltable(pr_grid(est_star), sub = pr_grid(se_par),
        header = c("", "Co-worker,\ntwo-digit (A)", "Co-worker,\nbroad cell (C)", "Own\nreport (B)",
@@ -344,7 +346,30 @@ ltable(rbind(sens_grid(function(x) f(100 * x$estimate, 2), "job_sorting"),
 \FloatBarrier
 ```
 
-# D. Robustness of the returns net of education and cognitive skills
+
+```{r}
+#| label: tbl-s12
+#| tbl-cap: "Mediation effects with design-based standard errors (log wages in %; earnings decile in percentile points)"
+des_rows <- c(education = "ACME: education", cognitive = "ACME: cognitive skills",
+              experience = "ACME: experience and tenure", job_sorting = "ACME: occupation and sector",
+              industry = "ACME: industry", tasks = "ACME: tasks", direct = "ADE: direct effect", total = "Total effect")
+des_cell <- function(r, tr, pt) { x <- country_and_summary(res[[r]], paste0("mean|", tr, "|", pt)); x[x$country == "Mean", ] }
+des_grid <- function(fun, r, m) do.call(rbind, lapply(names(des_rows), function(pt)
+  c(des_rows[[pt]], sapply(trait_names, function(tr) fun(des_cell(r, tr, pt), des_cell(m, tr, pt))))))
+se_two <- function(x, y) paste0("(", f(100 * x$se, 2), "; ", f(100 * y$se, 2), ")")
+se_ratio <- local({ a <- unlist(lapply(names(res$des), function(cc) res$ch[[cc]]$se[match(res$des[[cc]]$term, res$ch[[cc]]$term)] / res$des[[cc]]$se)); stats::median(a, na.rm = TRUE) })
+notes_des <- paste0("*Notes:* The same linear mediation effects as in Table 2, re-estimated with design-based inference: the 80 replicate weights and the 10 plausible values of literacy, with the wage coefficients that weight each block index re-estimated in every replicate. Cells are the mean of the country estimates; in parentheses, the design-based standard error followed by the standard error from mediate, which takes the indices as given. Point estimates average the 10 plausible values and can differ slightly from Table 2, which uses their mean. The median ratio of the mediate to the design-based standard error across countries and effects is ", f(se_ratio, 2), ". ", stars_note)
+ltable(rbind(des_grid(function(x, y) est_star(x), "des", "ch"), des_grid(function(x, y) est_star(x), "d_des", "d_ch")),
+       sub = rbind(des_grid(se_two, "des", "ch"), des_grid(se_two, "d_des", "d_ch")),
+       header = c("", "Extraversion", "Conscientiousness", "Open-\nmindedness", "Emotional\nstability", "Agreeableness"),
+       align = "lccccc",
+       panels = c("A. Log hourly wages, mean of 12 countries" = 1, "B. Earnings decile, mean of 19 countries" = 9),
+       tabcolsep = 4, notes = notes_des)
+```
+
+`r table_notes(notes_des)`
+
+# D. Robustness
 
 ```{r}
 #| label: sens-data
@@ -379,23 +404,23 @@ occ_rem_dev <- max(sapply(trait_names, function(tr) abs(occ_num("occ2", tr, "dir
 
 The returns net of education and cognitive skills change little under alternative specifications: numeracy instead of literacy, literacy and numeracy together, untrimmed earnings, earnings without bonuses, and the sample without Poland (@fig-s2). No single country moves a mean return by more than `r f(loo_dev, 1)`%, and a random-effects pooling of the 12 countries differs from the simple mean by at most `r f(re_dev, 1)`%. Measurement error in the 3-item scores works in the other direction: in the 7 countries with 6-item scales, a split-half instrumental-variable correction [@gillen2019] raises the extraversion return from `r rv_("Six-item countries, uncorrected", "EXTR")` to `r rv_("Six-item countries, split-half IV", "EXTR")`%.
 
-@fig-s3 reports the robustness values of @cinelli2020. To reduce a return to zero, an unobserved confounder would have to explain between `r f(100 * rv_min, 1)`% and `r f(100 * rv_max, 1)`% of the residual variance of log wages, and the same share of the residual variance of the non-cognitive skill. For comparison, parental education explains `r f(100 * bench_w, 1)`% of the residual variance of wages and at most `r f(100 * bench_t, 1)`% of the residual variance of a non-cognitive skill.
+@fig-s3 reports the robustness values of @cinelli2020. To reduce a direct effect to zero, an unobserved confounder would have to explain between `r f(100 * rv_min, 1)`% and `r f(100 * rv_max, 1)`% of the residual variance of log wages, and the same share of the residual variance of the non-cognitive skill. For comparison, parental education explains `r f(100 * bench_w, 1)`% of the residual variance of wages and at most `r f(100 * bench_t, 1)`% of the residual variance of a non-cognitive skill.
 
 ```{r}
 #| label: fig-s2
-#| fig-cap: "Adjusted wage-regression estimates (net of education and cognitive skills) under alternative specifications and samples. Mean of countries with 95% intervals (%); the dashed line marks the main estimate. The last 2 rows use the 7 countries with 6-item scales; the split-half instrumental-variable estimate corrects for measurement error in the 3-item scores."
+#| fig-cap: "Adjusted wage-regression estimates (net of education and cognitive skills) under alternative specifications and samples. Mean of countries with 95% intervals (%); the dashed line marks the main estimate. The last 2 rows use the 7 countries with 6-item scales; the split-half instrumental-variable estimate corrects for measurement error in the 3-item scores. The second 3-item half is reconstructed from the published 3-item and 6-item scores under the assumption of parallel items, so this check is approximate."
 fig(fig_robustness_checks(checks, unit = "%"), "fig8_robustness", 6.5, 3.3)
 ```
 
 ```{r}
 #| label: fig-s3
-#| fig-cap: "Sensitivity of the adjusted wage-regression estimates to unobserved confounding (Cinelli–Hazlett robustness values): the share of the residual variance of both log wages and the non-cognitive skill that an unobserved confounder would need to explain to reduce the return to zero. Circles are countries; the diamond is the mean of countries with its 95% interval. The shaded area extends to the larger of the two parental-education benchmarks (mean of countries)."
+#| fig-cap: "Sensitivity of the direct effects to unobserved confounding (Cinelli–Hazlett robustness values, outcome equation with all 6 blocks): the share of the residual variance of both log wages and the non-cognitive skill that an unobserved confounder would need to explain to reduce the direct effect to zero. Circles are countries; the diamond is the mean of countries with its 95% interval. The shaded area extends to the larger of the two parental-education benchmarks (mean of countries)."
 fig(fig_robustness_values(res$rv1), "fig9_robustness_values", 6.2, 3)
 ```
 
 ```{r}
 #| label: fig-s4
-#| fig-cap: "Indirect effect through industry, split by industry. For each ISIC Rev. 4 section, the contribution is the effect of the skill on the probability of working in that industry times the industry's wage differential, which is shown in parentheses relative to the average job of workers with comparable education, cognitive skills, experience and tenure, occupation, sector and tasks. Mean of 12 countries with 95% intervals from the replicate weights and plausible values (%). Industries are ordered by their wage differential. Diamond: the indirect effect through industry from mediate, which the industry terms add up to."
+#| fig-cap: "Indirect effect through industry, split by industry. For each ISIC Rev. 4 section, the contribution is the effect of the skill on the probability of working in that industry times the industry's wage differential, which is shown in parentheses relative to the average job of workers with comparable education, cognitive skills, experience and tenure, occupation, sector and tasks. Mean of 12 countries with 95% intervals from the replicate weights and plausible values (%). Industries are ordered by their wage differential. Diamond: the indirect effect through industry from mediate, estimated separately; the industry terms add up to it up to the averaging of plausible values and the omitted not-reported category."
 fig(fig_industry_split(res$ind, res$ch), "fig10_industry_split", 6.8, 5.6)
 ```
 

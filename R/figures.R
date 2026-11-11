@@ -372,8 +372,8 @@ fig_industry_split <- function(split, ch, unit = "%") {
   tab$sec <- sub("^[A-Z]+\\|(.*)\\|contrib$", "\\1", tab$term)
   tot <- country_and_summary(ch, paste0("mean|", names(trait_label), "|industry")); tot <- tot[tot$country == "Mean", ]
   tot$trait <- factor(trait_label[sub("mean\\|(\\w+)\\|.*", "\\1", tot$term)], levels = trait_label)
-  lvl <- c("Sum: indirect effect through industry", " ", rev(unname(lab)))
-  tab$row <- factor(lab[tab$sec], levels = rev(lvl)); tot$row <- factor("Sum: indirect effect through industry", levels = rev(lvl))
+  lvl <- c("Indirect effect through industry (mediate)", " ", rev(unname(lab)))
+  tab$row <- factor(lab[tab$sec], levels = rev(lvl)); tot$row <- factor("Indirect effect through industry (mediate)", levels = rev(lvl))
   ggplot(tab, aes(100 * estimate, row)) +
     geom_vline(xintercept = 0, colour = pal$zero, linewidth = 0.35) +
     geom_linerange(aes(xmin = 100 * lo, xmax = 100 * hi), colour = pal$ink2, linewidth = 0.4) +
