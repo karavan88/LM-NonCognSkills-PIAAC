@@ -20,7 +20,7 @@
 #   (second three-item halves of the long personality scales), supervisor.
 # =============================================================================
 
-# ---- specification: baseline controls and the 4 mediator blocks --------------
+# ---- specification: baseline controls and the 6 mediator blocks --------------
 # The baseline holds characteristics fixed before labour-market entry; the 5
 # non-cognitive skills are always entered jointly.
 base_rhs <- paste(
@@ -30,7 +30,9 @@ base_rhs <- paste(
 blocks4 <- list(
   education   = "education",                          # six ISCED-based categories
   cognitive   = c("literacy", "I(literacy^2)"),       # assessed literacy, 50-point units
-  job_sorting = c("occupation", "sector", "establishment_size"),
+  experience  = c("exper", "I(exper^2)", "exper_miss", "tenure", "I(tenure^2)", "tenure_miss"),
+  job_sorting = c("occupation", "sector", "establishment_size"),   # occupation and workplace
+  industry    = "industry",                                        # ISIC Rev. 4 section
   tasks       = task_names)
 
 rhs_upto <- function(k, base = base_rhs, b = blocks4) {
@@ -127,7 +129,7 @@ complementarity_rhs <- function(suffix = "_z", cell_fe = "occupation",
   } else paste(paste0(trait_names, " * ", tk), collapse = " + ")
   paste(c(inter, "age_band + gender + born_in_country + mother_education",
           "father_education + education + literacy + I(literacy^2)",
-          cell_fe, "sector + establishment_size"), collapse = " + ")
+          "exper + I(exper^2) + exper_miss + tenure + I(tenure^2) + tenure_miss", cell_fe, "industry + sector + establishment_size"), collapse = " + ")
 }
 
 pick_interaction <- function(cf, trait, task) {
@@ -185,7 +187,7 @@ yardstick_estimator <- function() {
 
 # ---- positive control: numeracy x numeracy use under several control sets ------------
 pc_variants_estimator <- function() {
-  job <- "+ occupation + sector + establishment_size"
+  job <- "+ exper + I(exper^2) + exper_miss + tenure + I(tenure^2) + tenure_miss + occupation + industry + sector + establishment_size"
   specs <- list(
     own_full   = list(use = "numeracy_use",   rhs = paste("+ education", job)),
     own_nojob  = list(use = "numeracy_use",   rhs = "+ education"),
@@ -258,7 +260,7 @@ allocation_estimator <- function(job_controls = FALSE, tenure = FALSE, suffix = 
     for (tr in trait_names) {
       tk <- paste0(matched_task[[tr]], suffix)
       rhs <- paste(base_rhs, "+ education + literacy + I(literacy^2)")
-      if (job_controls) rhs <- paste(rhs, "+ occupation + sector + establishment_size")
+      if (job_controls) rhs <- paste(rhs, "+ occupation + industry + sector + establishment_size")
       if (tenure) rhs <- paste(rhs, "+", paste0(tr, ":tenure_years"), "+ tenure_years")
       dd <- complete_for(d, rhs, c(tk, w)); dd$.w <- dd[[w]]
       cf <- stats::coef(wls(paste(tk, "~", rhs), dd))
@@ -386,4 +388,31 @@ pool_terms <- function(results) {
                p = 2 * stats::pnorm(-abs(p$z)), tau2 = p$tau2, I2 = p$I2,
                pred_low = p$prediction[1], pred_high = p$prediction[2], k = p$k)
   }))
+}
+
+# ---- industry indirect effect split by industry -------------------------------------------------
+# The ACME through the industry block is a sum over industries of a_jm * b_m: a_jm is the effect of
+# skill j on working in industry m (linear probability, given the baseline), b_m the industry's wage
+# premium in the full outcome equation. Premia are measured relative to the employment-weighted
+# average job, so each term reads as "share shifted into industry m times its premium"; because the
+# a_jm sum to zero over industries, the terms still add up to the industry ACME.
+industry_split_estimator <- function(b = blocks4) {
+  rhs <- paste(c(base_rhs, unlist(b)), collapse = " + ")
+  function(d, w) {
+    d <- complete_for(d, rhs, c("log_wage", w)); d$.w <- d[[w]]
+    cf <- stats::coef(wls(paste("log_wage ~", rhs), d)); lev <- levels(d$industry)
+    prem <- stats::setNames(c(0, cf[paste0("industry", lev[-1])]), lev); prem[is.na(prem)] <- 0
+    share <- tapply(d$.w, d$industry, sum)[lev] / sum(d$.w)
+    prem <- prem - sum(share * prem)
+    out <- c()
+    for (l in lev) {
+      d$.y <- as.numeric(d$industry == l)
+      a <- stats::coef(wls(paste(".y ~", base_rhs), d))[trait_names]
+      out[paste0(trait_names, "|", l, "|contrib")] <- a * prem[[l]]
+      out[paste0(trait_names, "|", l, "|sorting")] <- a
+      out[paste0("premium|", l)] <- prem[[l]]
+      out[paste0("share|", l)] <- share[[l]]
+    }
+    out
+  }
 }

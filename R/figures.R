@@ -16,7 +16,8 @@ pal <- list(
   ink = "#1f1e1c", ink2 = "#52514e", muted = "#8a8984", grid = "#e7e6e2",
   zero = "#9c9b96", mean = "#2a78d6", median = "#eb6834",
   parts = c("Education" = "#2a78d6", "Cognitive skills" = "#1baf7a",
-            "Occupation and employer" = "#eda100", "Tasks" = "#e87ba4",
+            "Experience and tenure" = "#7cc4e8", "Occupation and sector" = "#eda100",
+            "Industry" = "#b5651d", "Tasks" = "#e87ba4",
             "Direct effect" = "#4a3aa7"),
   gender = c(Men = "#4a3aa7", Women = "#1baf7a"),
   div_lo = "#d03b3b", div_mid = "#f0efec", div_hi = "#2a78d6")
@@ -30,7 +31,8 @@ task_label <- c(influence = "Influencing", organisation = "Organizing",
 matched_task_label <- c(EXTR = "Influencing", CONS = "Organizing", OPEM = "Learning",
                         EMOS = "Time pressure", AGRE = "Cooperation")
 part_label <- c(education = "Education", cognitive = "Cognitive skills",
-                job_sorting = "Occupation and employer", tasks = "Tasks", direct = "Direct effect")
+                experience = "Experience and tenure", job_sorting = "Occupation and sector",
+                industry = "Industry", tasks = "Tasks", direct = "Direct effect")
 country_label <- c(CHL = "Chile", HRV = "Croatia", CZE = "Czechia", EST = "Estonia",
                    FRA = "France", IRL = "Ireland", ITA = "Italy", LVA = "Latvia",
                    LTU = "Lithuania", NZL = "New Zealand", POL = "Poland", ESP = "Spain",
@@ -182,7 +184,7 @@ fig_channels_by_country <- function(ch, unit = "%", keep = NULL, mean_label = "M
     facet_wrap(~trait, nrow = 1, scales = "free_x") +
     labs(x = if (is.null(xlab)) paste0("Indirect and direct effects per SD of the skill (", unit, "); circle = total effect") else xlab,
          y = NULL, title = title) +
-    theme_paper() + guides(fill = guide_legend(nrow = 1))
+    theme_paper() + guides(fill = guide_legend(nrow = 2, byrow = TRUE))
 }
 
 # ---- Robustness values ------------------------------------------------------------------
@@ -298,8 +300,9 @@ fig_robustness_checks <- function(checks, unit = "%") {
 # rho: rho* of the cumulative indirect effect through blocks 1..k, by country (panel a).
 # sens: named list (countries) of medsens() grids with columns blocks, rho, acme; panel b shows
 # the ACME under each assumed error correlation rho as a share of the ACME at rho = 0.
-channel_label <- c(blocks_1to1 = "Education", blocks_1to2 = "+ Cognitive skills",
-                   blocks_1to3 = "+ Occupation\nand employer", blocks_1to4 = "+ Tasks")
+channel_label <- c(blocks_1to1 = "Education", blocks_1to2 = "+ Cognitive\nskills",
+                   blocks_1to3 = "+ Experience\nand tenure", blocks_1to4 = "+ Occupation\nand sector",
+                   blocks_1to5 = "+ Industry", blocks_1to6 = "+ Tasks")
 fig_channel_sensitivity <- function(rho, rho_grid = seq(0, 0.4, by = 0.01), sens) {
   terms <- paste0("rho_star|", names(channel_label))
   tab <- country_and_summary(rho, terms)
@@ -313,9 +316,9 @@ fig_channel_sensitivity <- function(rho, rho_grid = seq(0, 0.4, by = 0.01), sens
     guides(fill = guide_legend(nrow = 1, override.aes = list(
       shape = c(21, rep(23, n_sum())), size = c(2.2, rep(2.6, n_sum())),
       stroke = c(0.4, rep(0, n_sum())), colour = c(pal$ink, rep(NA, n_sum()))))) +
-    scale_x_continuous(limits = c(0, 1), breaks = c(0, 0.25, 0.5, 0.75, 1), labels = minus_lab,
+    scale_x_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1), labels = minus_lab,
                        expand = expansion(mult = c(0, 0.02))) +
-    facet_wrap(~channel, nrow = 1) + theme_paper() +
+    facet_wrap(~channel, nrow = 1) + theme_paper() + theme(strip.text = element_text(size = 6.6, face = "bold", lineheight = 0.9)) +
     labs(title = "a. How strong a hidden factor would erase the indirect effect")
   grid <- do.call(rbind, lapply(seq_along(channel_label), function(k) {
     sh <- sapply(sens, function(g) { g <- g[g$blocks == k, ]
@@ -323,14 +326,15 @@ fig_channel_sensitivity <- function(rho, rho_grid = seq(0, 0.4, by = 0.01), sens
     data.frame(channel = factor(channel_label[[k]], levels = channel_label), rho = rho_grid,
                mean = rowMeans(sh), lo = apply(sh, 1, min), hi = apply(sh, 1, max))
   }))
-  cols <- setNames(unname(pal$parts[1:4]), levels(tab$channel))
+  cols <- setNames(unname(pal$parts[seq_along(channel_label)]), levels(tab$channel))
+  leg <- unname(gsub("\n", " ", channel_label))
   pb <- ggplot(grid, aes(rho, 100 * mean, colour = channel, fill = channel)) +
     geom_hline(yintercept = 100, colour = pal$zero, linewidth = 0.35) +
     geom_vline(xintercept = c(0.1, 0.2, 0.3), colour = "#bdbcb6", linewidth = 0.3, linetype = "22") +
     geom_ribbon(aes(ymin = 100 * lo, ymax = 100 * hi), alpha = 0.12, colour = NA) +
     geom_line(linewidth = 0.7) +
-    scale_colour_manual(values = cols, labels = c("Education", "+ Cognitive skills", "+ Occupation/employer", "+ Tasks")) +
-    scale_fill_manual(values = cols, labels = c("Education", "+ Cognitive skills", "+ Occupation/employer", "+ Tasks")) +
+    scale_colour_manual(values = cols, labels = leg) +
+    scale_fill_manual(values = cols, labels = leg) +
     scale_x_continuous(breaks = seq(0, 0.4, 0.1), labels = minus_lab, expand = expansion(mult = c(0, 0.02))) +
     coord_cartesian(ylim = c(0, 100)) +
     labs(x = "Correlation induced by hidden factors (rho)", y = "Share of the indirect effect that remains (%)",
@@ -343,4 +347,42 @@ fig_channel_sensitivity <- function(rho, rho_grid = seq(0, 0.4, by = 0.01), sens
   patchwork::wrap_plots(list(pa, pb), ncol = 1, heights = c(1.15, 1)) +
     patchwork::plot_layout(guides = "collect") &
     theme(legend.position = "bottom", legend.box = "vertical", legend.spacing.y = unit(0, "pt"))
+}
+
+# ---- Industry indirect effect split by industry (appendix) ---------------------------------------------
+industry_label <- c(A = "Agriculture", B = "Mining", C = "Manufacturing", D = "Electricity, gas", E = "Water, waste",
+  F = "Construction", G = "Wholesale, retail", H = "Transport, storage", I = "Accommodation, food",
+  J = "Information, communication", K = "Finance, insurance", L = "Real estate", M = "Professional, scientific",
+  N = "Administrative support", O = "Public administration", P = "Education", Q = "Health, social work",
+  R = "Arts, recreation", S = "Other services", T = "Households as employers", U = "Extraterritorial",
+  "Not reported" = "Not reported")
+fig_industry_split <- function(split, ch, unit = "%") {
+  # split: named list (countries) of industry_split_estimator() results. Rows: industries ordered by their
+  # wage premium (mean of countries), with the premium in the label; panels: the 5 skills; marks: mean of
+  # countries with 95% interval. The bottom row is the ACME through the industry block from mediate (ch), with
+  # its own interval; the industry terms add up to it up to the plausible-value averaging.
+  secs <- setdiff(names(industry_label), "Not reported")
+  prem <- country_and_summary(split, paste0("premium|", secs)); prem <- prem[prem$country == "Mean", ]
+  prem$sec <- sub("premium\\|", "", prem$term); prem <- prem[order(prem$estimate), ]
+  pr <- round(100 * prem$estimate); pr[pr == 0] <- 0
+  lab <- setNames(sprintf("%s (%s%%)", industry_label[prem$sec], ifelse(pr > 0, paste0("+", pr), sub("^-", "\u2212", pr))), prem$sec)
+  terms <- as.vector(outer(names(trait_label), secs, function(t, s) paste0(t, "|", s, "|contrib")))
+  tab <- country_and_summary(split, terms); tab <- tab[tab$country == "Mean", ]
+  tab$trait <- factor(trait_label[sub("\\|.*", "", tab$term)], levels = trait_label)
+  tab$sec <- sub("^[A-Z]+\\|(.*)\\|contrib$", "\\1", tab$term)
+  tot <- country_and_summary(ch, paste0("mean|", names(trait_label), "|industry")); tot <- tot[tot$country == "Mean", ]
+  tot$trait <- factor(trait_label[sub("mean\\|(\\w+)\\|.*", "\\1", tot$term)], levels = trait_label)
+  lvl <- c("Sum: indirect effect through industry", " ", rev(unname(lab)))
+  tab$row <- factor(lab[tab$sec], levels = rev(lvl)); tot$row <- factor("Sum: indirect effect through industry", levels = rev(lvl))
+  ggplot(tab, aes(100 * estimate, row)) +
+    geom_vline(xintercept = 0, colour = pal$zero, linewidth = 0.35) +
+    geom_linerange(aes(xmin = 100 * lo, xmax = 100 * hi), colour = pal$ink2, linewidth = 0.4) +
+    geom_point(shape = 21, size = 1.5, fill = "white", colour = pal$ink, stroke = 0.4) +
+    geom_linerange(data = tot, aes(xmin = 100 * lo, xmax = 100 * hi), colour = pal$mean, linewidth = 0.8) +
+    geom_point(data = tot, shape = 23, size = 2.3, fill = pal$mean, colour = pal$mean, stroke = 0) +
+    scale_y_discrete(drop = FALSE) +
+    scale_x_continuous(labels = minus_lab, breaks = scales::breaks_pretty(n = 3)) +
+    facet_wrap(~trait, nrow = 1) +
+    labs(x = paste0("Contribution to the indirect effect through industry, per SD of the skill (", unit, ")"), y = NULL) +
+    theme_paper() + theme(axis.text.y = element_text(size = 6.8), strip.text = element_text(size = 7.2, face = "bold"))
 }

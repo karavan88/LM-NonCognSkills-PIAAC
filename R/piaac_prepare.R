@@ -41,7 +41,7 @@ required_vars <- c("SEQID", "CNTRYID", trait_names, task_items, pv_names,
   "ISCOSKIL4", "D2_Q03", "D2_Q07a",
   paste0("SPFWT", 0:80), "VEMETHOD", "VENREPS", "VEFAYFAC")
 
-optional_vars <- c("AGE_R", "ISCO1C", "ISCO2C", "A2_Q03a", "J2_Q04c", "J2_Q05c",
+optional_vars <- c("AGE_R", "ISCO1C", "ISCO2C", "ISIC1C", "C2_Q10_C", "A2_Q03a", "J2_Q04c", "J2_Q05c",
   "D2_Q09a", "D2_Q11_C", "D2_Q13", "D2_Q05a1", "D2_Q05a2",
   "H2_Q02a", "H2_Q02b", "H2_Q02c", "H2_Q02d", "H2_Q02e",
   "H2_Q03a", "H2_Q10", "H2_Q08b", "H2_Q08c", "H2_Q06b",
@@ -116,7 +116,7 @@ prepare_country <- function(path, country = file_country(path), rules = wage_rul
   ve_method <- tolower(as.character(d$VEMETHOD[1]))
   n_reps    <- as.integer(num(d$VENREPS[1]))
   fay       <- num(d$VEFAYFAC[1])
-  character_vars <- c("SEQID", "VEMETHOD", "ISCO1C", "ISCO2C")
+  character_vars <- c("SEQID", "VEMETHOD", "ISCO1C", "ISCO2C", "ISIC1C")
   for (v in setdiff(c(required_vars, optional_vars), character_vars)) d[[v]] <- num(d[[v]])
 
   # --- eligibility (before wage rules) ---
@@ -168,6 +168,10 @@ prepare_country <- function(path, country = file_country(path), rules = wage_rul
   d$sector <- factor(d$D2_Q03, levels = 1:3, labels = c("Private", "Public", "Non-profit"))
   d$establishment_size <- factor(d$D2_Q07a, levels = 1:6,
     labels = c("1-10", "11-49", "50-249", "250-499", "500-999", "1000+"))
+  # Industry: ISIC Rev. 4 section (21 categories, A-U); not reported is its own level, so
+  # nobody leaves the sample.
+  ind <- as.character(unclass(d$ISIC1C)); ind[!ind %in% LETTERS[1:21]] <- "Not reported"
+  d$industry <- factor(ind)
 
   # --- optional information (NA where a country does not release it) ---
   d$exact_age <- ifelse(d$AGE_R %in% 25:54, d$AGE_R, NA_real_)
@@ -193,6 +197,15 @@ prepare_country <- function(path, country = file_country(path), rules = wage_rul
   # Start year is released in every wage country except Estonia.
   start_year <- ifelse(d$D2_Q05a2 %in% 1950:survey_year, d$D2_Q05a2, NA_real_)
   d$tenure_years <- pmax(0, survey_year - start_year)
+
+  # Experience and tenure block of the mediation model (augmented Mincer equation):
+  # years of paid work during lifetime (C2_Q10_C, top-coded at 47) and years with the
+  # current employer. Missing values are set to 0 with a missing indicator so that the
+  # sample is unchanged; where a country does not release tenure, both tenure terms are
+  # constant and drop out of the regression.
+  ex <- ifelse(is.finite(d$C2_Q10_C) & d$C2_Q10_C >= 0 & d$C2_Q10_C <= 47, d$C2_Q10_C, NA_real_)
+  d$exper_miss  <- as.numeric(is.na(ex));            d$exper  <- ifelse(is.na(ex), 0, ex)
+  d$tenure_miss <- as.numeric(is.na(d$tenure_years)); d$tenure <- ifelse(is.na(d$tenure_years), 0, d$tenure_years)
 
   # Numeracy use at work: mean of five frequency items, 0 (never) to 1 (every day).
   nu <- sapply(numeracy_items, function(v) scale01(d[[v]]))

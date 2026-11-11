@@ -79,6 +79,8 @@ if (variant == "main") {
   cached("rob_nobonus",   rc(with_outcome(mean_gradient_estimator(rhs_hc), "log_wage_nobonus")), prefix = "")
   # split-half instrumental variables (Gillen, Snowberg and Yariv 2019), countries with the long scales
   cached("rob_oriv",      rc(oriv_estimator(controls_upto(2)), countries = B_countries), prefix = "")
+  # ---- the industry indirect effect split by industry (Appendix figure) --------------------------
+  cached("industry_split", run_countries(country_list, industry_split_estimator(), n_pv = 10, reps_on_pv = 1))
   # ---- robustness values of the direct effects (Cinelli and Hazlett 2020; Appendix Figure A2) ----
   cached("rv_M1",         rc(robustness_value_estimator(rhs_hc)), prefix = "")
 }

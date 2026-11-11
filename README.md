@@ -2,8 +2,9 @@
 
 Code that reproduces every number, table and figure of the manuscript from the
 PIAAC Cycle 2 public-use files. The study estimates a causal mediation model of
-the wage return to each of the 5 non-cognitive skills (Big Five), with education,
-cognitive skills, occupation and employer, and job tasks as mediators, in 12
+the wage return to each of the 5 non-cognitive skills (Big Five), with 6 blocks of
+mediators (education; cognitive skills; experience and tenure; occupation and sector;
+industry; job tasks), in 12
 countries with continuous hourly earnings and 7 further countries that release
 earnings as deciles. The mediation estimates are outputs of `mediation::mediate()`
 (Imai, Keele and Yamamoto 2010; Tingley et al. 2014), and their sensitivity
@@ -61,9 +62,9 @@ file or set `PIAAC_REFRESH=1` to recompute it.
 ### Run time
 
 On a laptop with 8 cores: data preparation 1 minute; `make estimates` 15 minutes with 3 cores (9 for the log-wage sample, 6 for the deciles);
-the mediation runs are single-threaded and take about 40 minutes (log wages),
-85 minutes (deciles) and 30 to 40 minutes for each of the 3 block variants; they
-can be started in parallel. Rendering takes about 2 minutes.
+the mediation runs are single-threaded and take about 1 hour (log wages), 1.5 hours
+(deciles) and 40 to 60 minutes for each of the 3 block variants when run one or two
+at a time; running all 5 at once on 16 GB of memory is slower. Rendering takes about 2 minutes.
 
 ## What produces what
 
@@ -73,6 +74,7 @@ can be started in parallel. Rendering takes about 2 minutes.
 | Flow | `R/02_sample_flow.R` | `results/sample_flow.csv` | Table 1 |
 | WLS | `R/03_estimate.R` | `results/art_skills_compl.rds`, `art_pc_variants.rds`, `art_mp_*.rds` | Figures 4 to 6, Table 3 |
 | | | `results/art_alloc_*.rds` | Figure 7, Table 4 |
+| | | `results/art_industry_split.rds` | Appendix Figure A3 (industry effect by industry) |
 | | | `results/m1.rds`, `rob_*.rds`, `rv_M1.rds` | Appendix Figures A1 and A2 |
 | | | `results_decile/art_*.rds` | decile panels of Figures 5 and 7, Tables 3 and 4 |
 | Mediation | `R/04_mediation.R` | `results_mediation/art_channels.rds` | Figures 1 and 2, Table 2, Appendix Tables A2 and A3 |
@@ -93,13 +95,20 @@ the interval bounds and p-values; `run_info.rds` records the settings.
   non-cognitive skills are standardized within country; literacy and numeracy
   enter in 50-point units; tasks are 0 to 1 indices of the PIAAC task items, with
   co-worker demand as leave-one-out cell means.
-- **Mediation** (`R/04_mediation.R`): for each country, the full weighted wage
-  equation gives each block's index H_k = X_k β_k. `mediate()` is called with each
-  skill as the treatment (−0.5 to +0.5 SD) and each H_k as the mediator, the
-  outcome equation containing all 4 indices; a second call with the single index
-  of all blocks returns the total and direct effects. Literacy and numeracy are
-  the mean of the 10 plausible values; the survey weight enters as a precision
-  weight; intervals are quasi-Bayesian (1,000 draws, seed 20261109).
+- **Mediation** (`R/04_mediation.R`): the baseline holds the 5 skills, age group,
+  gender, nativity and parental education. The outcome equation adds 6 blocks:
+  education; cognitive skills (literacy quadratic); experience and tenure (years of
+  paid work and years with the current employer, each with its square); occupation
+  and sector (occupation group, private/public/non-profit sector, establishment
+  size); industry (21 ISIC Rev. 4 sections); and 5 task indices. Missing experience,
+  tenure and industry carry indicator variables, so the sample does not change. For
+  each country, the full weighted wage equation gives each block's index
+  H_k = X_k β_k. `mediate()` is called with each skill as the treatment (−0.5 to
+  +0.5 SD) and each H_k as the mediator, the outcome equation containing all 6
+  indices; a second call with the single index of all blocks returns the total and
+  direct effects. Literacy and numeracy are the mean of the 10 plausible values; the
+  survey weight enters as a precision weight; intervals are quasi-Bayesian (1,000
+  draws, seed 20261109).
 - **Sensitivity** (`R/04_mediation.R`): `medsens()` takes the index of each cumulative
   set of blocks as a single mediator and recomputes the ACME under an assumed
   correlation ρ between the errors of the mediator and outcome equations (Imai,

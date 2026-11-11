@@ -78,7 +78,7 @@ med_seq <- function(ch) lapply(ch, function(r) do.call(rbind, lapply(c(total = "
   data.frame(term = paste0(sub("^mean\\|(\\w+)\\|.*$", "\\1", x$term), "|", m),
              estimate = x$estimate, se = x$se, stringsAsFactors = FALSE) })))
 res <- list(
-  ch = M("art_channels"), rho = M("art_rho"), sens = M("med_sens_grid"),
+  ch = M("art_channels"), rho = M("art_rho"), sens = M("med_sens_grid"), ind = R("art_industry_split"),
   yard = R("art_yardstick"), rv1 = R("rv_M1"),
   sc = R("art_skills_compl"), pc = R("art_pc_variants"),
   A = R("art_mp_A"), B = R("art_mp_B"), C = R("art_mp_C"), A0 = R("art_mp_nojob_A"), B0 = R("art_mp_nojob_B"),
@@ -166,14 +166,15 @@ fig <- function(p, name, width = 6.5, height = 4) {
 
 *Returns to non-cognitive skills: Do they arise through education, job sorting, or work tasks?*
 
-This appendix accompanies the study. Section A reports the sample construction (Table A1); Section B the total, indirect and direct effects for every country, for log hourly wages in the 12 main countries and for the earnings decile in the 19 countries of the decile sample (Tables A2–A5); Section C the skill × job-demand interactions under 3 demand measures and the sensitivity of the mediation estimates to the occupation and employer block (Tables A6 and A7); Section D the robustness checks summarized in the study (Figures A1 and A2). Significance marks (\* p < 0.10, \*\* p < 0.05, \*\*\* p < 0.01) and all definitions follow the study.
+This appendix accompanies the study. Section A reports the sample construction (Table A1); Section B the total, indirect and direct effects for every country, for log hourly wages in the 12 main countries and for the earnings decile in the 19 countries of the decile sample (Tables A2–A5); Section C the skill × job-demand interactions under 3 demand measures and the sensitivity of the mediation estimates to the occupation and sector block (Tables A6 and A7); Section D the robustness checks summarized in the study (Figures A1 and A2) and the indirect effect through industry split by industry (Figure A3). Significance marks (\* p < 0.10, \*\* p < 0.05, \*\*\* p < 0.01) and all definitions follow the study.
 
 # A. Sample construction
 
 ```{r}
 #| label: parts
 parts_all <- c(total = "Total effect", education = "Education", cognitive = "Cognitive skills",
-               job_sorting = "Occupation and employer", tasks = "Tasks", direct = "Direct effect")
+               experience = "Experience and tenure", job_sorting = "Occupation and sector",
+               industry = "Industry", tasks = "Tasks", direct = "Direct effect")
 ```
 
 ```{r}
@@ -185,7 +186,7 @@ stages <- c(all = "Records in the 12 public-use files",
             wage = "Positive hourly earnings and survey weight",
             skills = "Valid gender, education, personality scores, and plausible values",
             tasks = "Complete responses to the 9 task items",
-            job = "Valid occupation group, employer sector, and establishment size",
+            job = "Valid occupation group, workplace sector, and establishment size",
             final = "After the wage-quality rules (analysis sample)")
 notes_flow <- "*Notes:* Each row applies one further condition to the row above. Wage-quality rules: the weighted bottom and top 1% of hourly earnings and values below 1/20 or above 20 times the weighted country median are dropped. Unweighted counts."
 ltable(data.frame(unname(stages), fmtN(colSums(flow[, names(stages)])),
@@ -206,7 +207,7 @@ ltable(data.frame(unname(stages), fmtN(colSums(flow[, names(stages)])),
 ```{r}
 #| label: tbl-s07
 #| tbl-cap: "Country-specific mediation estimates: total effect and direct effect of each non-cognitive skill (%, 95% intervals)"
-spec_cols <- c(M0 = "A. Total effect", M4 = "B. Direct effect (net of all 4 blocks)")
+spec_cols <- c(M0 = "A. Total effect", M4 = "B. Direct effect (net of all 6 blocks)")
 ord_rows <- c(countries[order(country_name(countries))], "Mean")
 ret_rows <- do.call(rbind, lapply(names(spec_cols), function(m) {
   x <- country_and_summary(res$seq, paste0(trait_names, "|", m))
@@ -214,7 +215,7 @@ ret_rows <- do.call(rbind, lapply(names(spec_cols), function(m) {
     sapply(trait_names, function(tr) { y <- x[x$country == cc & x$term == paste0(tr, "|", m), ]
       paste0(f(100 * y$estimate), " ", ci_br(y, 1)) })))) }))
 notes_ar <- paste("*Notes:* Total effect (regression with the baseline controls and the 5 non-cognitive skills) and",
-  "direct effect (net of education, cognitive skills, occupation and employer, and tasks) per SD of each",
+  "direct effect (net of education, cognitive skills, experience and tenure, occupation and sector, industry, and tasks) per SD of each",
   "skill, from mediate (Tingley et al. 2014) with the mean of the 10 plausible values of literacy; 95%",
   "quasi-Bayesian intervals.")
 ltable(ret_rows, header = c("", trait_label), align = "lccccc", long = TRUE,
@@ -235,17 +236,17 @@ notes_ac <- paste("*Notes:* Average indirect effect through each block of mediat
   "mediate (Tingley et al. 2014), mean of the 10 plausible values of literacy; they add up to the total",
   "effect. Standard errors are the standard deviation of the quasi-Bayesian draws; the mean row averages the 12 countries.")
 ltable(dec_rows, header = c("", "Total\neffect", "Education", "Cognitive\nskills",
-                            "Occupation\nand employer", "Tasks", "Direct\neffect"),
-       align = "lcccccc", long = TRUE,
-       groups = list(list(list(label = "Indirect effect through", from = 3, to = 6))),
+                            "Experience\nand tenure", "Occupation\nand sector", "Industry", "Tasks", "Direct\neffect"),
+       align = "lcccccccc", long = TRUE,
+       groups = list(list(list(label = "Indirect effect through", from = 3, to = 8))),
        panels = setNames(seq(1, by = 13, length.out = 5), trait_label),
-       space_before = seq(13, by = 13, length.out = 5), tabcolsep = 4, notes = notes_ac)
+       space_before = seq(13, by = 13, length.out = 5), tabcolsep = 2, notes = notes_ac)
 ```
 
 ```{r}
 #| label: tbl-s09
 #| tbl-cap: "Country-specific mediation estimates, earnings decile: total effect and direct effect of each non-cognitive skill (19 countries; percentile points, 95% intervals)"
-spec_cols <- c(M0 = "A. Total effect", M4 = "B. Direct effect (net of all 4 blocks)")
+spec_cols <- c(M0 = "A. Total effect", M4 = "B. Direct effect (net of all 6 blocks)")
 ord_rows <- c(countries_d[order(country_name(countries_d))], "Mean")
 dret_rows <- do.call(rbind, lapply(names(spec_cols), function(m) {
   x <- country_and_summary(res$d_seq, paste0(trait_names, "|", m))
@@ -253,7 +254,7 @@ dret_rows <- do.call(rbind, lapply(names(spec_cols), function(m) {
     sapply(trait_names, function(tr) { y <- x[x$country == cc & x$term == paste0(tr, "|", m), ]
       paste0(f(100 * y$estimate), " ", ci_br(y, 1)) })))) }))
 notes_dr <- paste("*Notes:* Total effect (regression with the baseline controls and the 5 non-cognitive skills) and",
-  "direct effect (net of education, cognitive skills, occupation and employer, and tasks) per SD of each",
+  "direct effect (net of education, cognitive skills, experience and tenure, occupation and sector, industry, and tasks) per SD of each",
   "skill, from mediate (Tingley et al. 2014) with the mean of the 10 plausible values of literacy; 95%",
   "quasi-Bayesian intervals. Outcome: earnings decile × 10.")
 ltable(dret_rows, header = c("", trait_label), align = "lccccc", long = TRUE,
@@ -274,11 +275,11 @@ notes_dc <- paste("*Notes:* Average indirect effect through each block of mediat
   "mediate (Tingley et al. 2014), mean of the 10 plausible values of literacy; they add up to the total",
   "effect. Standard errors are the standard deviation of the quasi-Bayesian draws; the mean row averages the 19 countries. Outcome: earnings decile × 10.")
 ltable(ddec_rows, header = c("", "Total\neffect", "Education", "Cognitive\nskills",
-                            "Occupation\nand employer", "Tasks", "Direct\neffect"),
-       align = "lcccccc", long = TRUE,
-       groups = list(list(list(label = "Indirect effect through", from = 3, to = 6))),
+                            "Experience\nand tenure", "Occupation\nand sector", "Industry", "Tasks", "Direct\neffect"),
+       align = "lcccccccc", long = TRUE,
+       groups = list(list(list(label = "Indirect effect through", from = 3, to = 8))),
        panels = setNames(seq(1, by = 20, length.out = 5), trait_label),
-       space_before = seq(20, by = 20, length.out = 5), tabcolsep = 4, notes = notes_dc)
+       space_before = seq(20, by = 20, length.out = 5), tabcolsep = 2, notes = notes_dc)
 ```
 
 ```{=latex}
@@ -299,8 +300,8 @@ pr_grid <- function(fun) cbind(pr_lab, sapply(c("A", "C", "B", "A0", "B0"), func
 notes_pairs <- paste("*Notes:* Interaction between each non-cognitive skill and the demand for its matched task,",
   "mean of countries with standard errors in parentheses. A: co-worker demand in two-digit",
   "occupation cells with two-digit occupation fixed effects (7 countries). C: co-worker demand",
-  "in broad job cells. B: the respondent's own report. Job controls: occupation group, sector, and",
-  "establishment size (two-digit occupations for A). The match premium is the mean of the 5",
+  "in broad job cells. B: the respondent's own report. Job controls: experience and tenure, occupation group, sector,",
+  "establishment size, and industry (two-digit occupations for A). The match premium is the mean of the 5",
   "matched interactions minus the mean of the 20 mismatched ones.",
   stars_note)
 ltable(pr_grid(est_star), sub = pr_grid(se_par),
@@ -316,13 +317,13 @@ ltable(pr_grid(est_star), sub = pr_grid(se_par),
 
 ```{r}
 #| label: tbl-s06
-#| tbl-cap: "Causal mediation estimates under alternative occupation and employer blocks (%)"
+#| tbl-cap: "Causal mediation estimates under alternative occupation and sector blocks (%)"
 sens_specs <- c("ch", "sup", "broadA", "occ2")
 sens_grid <- function(fun, part) do.call(rbind, lapply(trait_names, function(tr)
   c(trait_label[[tr]], sapply(sens_specs, function(r) {
     x <- country_and_summary(res[[r]], paste0("mean|", tr, "|", part)); fun(x[x$country == "Mean", ]) }))))
-notes_sens <- paste("*Notes:* Indirect effect through the occupation and employer block and direct effect from mediate,",
-  "mean of countries with quasi-Bayesian standard errors in parentheses. Main: occupation and employer block with 4 occupation groups, sector, and",
+notes_sens <- paste("*Notes:* Indirect effect through the occupation and sector block and direct effect from mediate, with all 6 blocks in the model;",
+  "mean of countries with quasi-Bayesian standard errors in parentheses. Main: occupation and sector block with 4 occupation groups, sector, and",
   "establishment size (12 countries). With supervision: adds an indicator for supervising",
   "other employees to the block. The 7 countries are Chile, Czechia, France, Italy, Latvia, Poland,",
   "and Spain, with the 4 occupation groups or with two-digit ISCO-08 occupations in the block.")
@@ -333,7 +334,7 @@ ltable(rbind(sens_grid(function(x) f(100 * x$estimate, 2), "job_sorting"),
        align = "lcccc",
        groups = list(list(list(label = "12 countries", from = 2, to = 3),
                           list(label = "7 countries", from = 4, to = 5))),
-       panels = c("A. Indirect effect through occupation and employer" = 1, "B. Direct effect" = 6),
+       panels = c("A. Indirect effect through occupation and sector" = 1, "B. Direct effect" = 6),
        notes = notes_sens)
 ```
 
@@ -390,6 +391,12 @@ fig(fig_robustness_checks(checks, unit = "%"), "fig8_robustness", 6.5, 3.3)
 #| label: fig-s3
 #| fig-cap: "Sensitivity of the adjusted wage-regression estimates to unobserved confounding (Cinelli–Hazlett robustness values): the share of the residual variance of both log wages and the non-cognitive skill that an unobserved confounder would need to explain to reduce the return to zero. Circles are countries; the diamond is the mean of countries with its 95% interval. The shaded area extends to the larger of the two parental-education benchmarks (mean of countries)."
 fig(fig_robustness_values(res$rv1), "fig9_robustness_values", 6.2, 3)
+```
+
+```{r}
+#| label: fig-s4
+#| fig-cap: "Indirect effect through industry, split by industry. For each ISIC Rev. 4 section, the contribution is the effect of the skill on the probability of working in that industry times the industry's wage differential, which is shown in parentheses relative to the average job of workers with comparable education, cognitive skills, experience and tenure, occupation, sector and tasks. Mean of 12 countries with 95% intervals from the replicate weights and plausible values (%). Industries are ordered by their wage differential. Diamond: the indirect effect through industry from mediate, which the industry terms add up to."
+fig(fig_industry_split(res$ind, res$ch), "fig10_industry_split", 6.8, 5.6)
 ```
 
 ```{=latex}

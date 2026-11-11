@@ -2,22 +2,23 @@
 # R/04_mediation.R
 # Causal mediation estimates with mediation::mediate() (Imai, Keele and Yamamoto
 # 2010; Imai and Yamamoto 2013; Tingley et al. 2014): the total effect of each
-# non-cognitive skill on log hourly wages, its indirect effects through 4 mediator
-# blocks (education, cognitive skills, occupation and employer, tasks) and its
+# non-cognitive skill on log hourly wages, its indirect effects through 6 mediator
+# blocks (education, cognitive skills, experience and tenure, occupation and sector,
+# industry, tasks) and its
 # direct effect, country by country.
 #
 #   Rscript R/04_mediation.R                              log-wage sample, 12 countries
 #   PIAAC_VARIANT=decile Rscript R/04_mediation.R         earnings-decile sample, 19 countries
-#   MED_BLOCKS=sup|occ2|broadA Rscript R/04_mediation.R   alternative occupation and employer blocks
+#   MED_BLOCKS=sup|occ2|broadA Rscript R/04_mediation.R   alternative occupation and sector blocks
 #                                                         (Appendix Table A7)
 #
 # Environment: MED_SIMS (quasi-Bayesian draws, default 1000), MED_PV ("mean" of the
 # 10 plausible values, default, or "1" for PV1), MED_RHO_SIMS (medsens draws, 200).
 #
-# For each country: the full wage equation (skills + baseline + 4 blocks) gives, for
+# For each country: the full wage equation (skills + baseline + 6 blocks) gives, for
 # every block k, the index H_k = X_k beta_k (its fitted contribution). Mediator
 # equations: H_k ~ skills + baseline. Outcome equation: log wage ~ skills + baseline
-# + H_1 + ... + H_4. mediate(treat = skill, mediator = H_k) returns the average
+# + H_1 + ... + H_6. mediate(treat = skill, mediator = H_k) returns the average
 # causal mediation effect through block k; a second model with the single index
 # H_all = sum of the H_k returns the total effect and the average direct effect.
 # Models are weighted least squares with the final survey weight (SPFWT0). Intervals
@@ -42,9 +43,9 @@ variant  <- Sys.getenv("PIAAC_VARIANT", "main")
 sims     <- as.integer(Sys.getenv("MED_SIMS", "1000"))
 rho_sims <- as.integer(Sys.getenv("MED_RHO_SIMS", "200"))
 pv_mode  <- Sys.getenv("MED_PV", "mean")
-# MED_BLOCKS: "main" (the 4 blocks), "sup" (supervisory responsibility added to the occupation
-# and employer block), "occ2" (2-digit occupations instead of the 4 groups, countries that release
-# them), "broadA" (the 4 blocks in those same countries). Appendix Table A7.
+# MED_BLOCKS: "main" (the 6 blocks), "sup" (supervisory responsibility added to the occupation
+# and sector block), "occ2" (2-digit occupations instead of the 4 groups, countries that release
+# them), "broadA" (the 6 blocks in those same countries). Appendix Table A7.
 blocks_mode <- Sys.getenv("MED_BLOCKS", "main")
 out_dir  <- file.path(root, if (variant == "decile") "results_mediation_decile" else "results_mediation")
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
@@ -116,7 +117,7 @@ one_country <- function(d, cc) {
       rows[[length(rows) + 1]] <- med_row(paste("mean", tr, k, sep = "|"), mk$d0, mk$d0.sims, mk$d0.ci, mk$d0.p)
       acme_sum <- acme_sum + mk$d0
     }
-    add_check[tr] <- acme_sum - ma$d0     # the 4 block ACMEs add up to the ACME through H_all
+    add_check[tr] <- acme_sum - ma$d0     # the block ACMEs add up to the ACME through H_all
   }
   out <- do.call(rbind, rows)
   # rho*: medsens() on the cumulative indices, one skill (rho* does not depend on the skill); main blocks only.
