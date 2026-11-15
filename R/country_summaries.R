@@ -28,6 +28,9 @@ country_long <- function(results, terms = NULL) {
 }
 
 median_ci <- function(est, se, n_sim = 20000, seed = 20261003) {
+  # The interval of the median is simulated only when the document reports a Median row (summary_rows);
+  # otherwise only the median itself is returned, which keeps rendering fast.
+  if (exists("summary_rows") && !"Median" %in% get("summary_rows")) return(c(estimate = stats::median(est), se = NA_real_, lo = NA_real_, hi = NA_real_))
   # Estimates reported without standard errors (rho* from medsens) have no interval.
   if (!all(is.finite(se))) return(c(estimate = stats::median(est), se = NA_real_, lo = NA_real_, hi = NA_real_))
   set.seed(seed)
@@ -70,4 +73,19 @@ homogeneity_test <- function(results, term) {
   x <- country_long(results, term); w <- 1 / x$se^2
   Q <- sum(w * (x$estimate - sum(w * x$estimate) / sum(w))^2)
   list(Q = Q, df = nrow(x) - 1, p = stats::pchisq(Q, nrow(x) - 1, lower.tail = FALSE))
+}
+
+industry_homogeneity <- function(split, min_share = 0.02, level = 0.05) {
+  # Descriptive count over industries: in how many is equality across countries rejected (Cochran's Q)
+  # for the industry wage differential and for the effect of each skill on working in the industry?
+  # split: industry_split_estimator() results. Industries with a mean employment share of at least
+  # min_share and an estimate in every country.
+  K <- length(split); has <- function(term) sum(sapply(split, function(x) any(x$term == term))) == K
+  secs <- setdiff(unique(unlist(lapply(split, function(x) sub("^premium[|]", "", grep("^premium[|]", x$term, value = TRUE))))), "Not reported")
+  secs <- secs[sapply(secs, function(s) has(paste0("premium|", s)))]
+  share <- sapply(secs, function(s) mean(sapply(split, function(x) x$estimate[x$term == paste0("share|", s)])))
+  secs <- secs[share >= min_share]
+  rejected <- function(terms) sum(sapply(terms, function(t) homogeneity_test(split, t)$p < level))
+  list(industries = secs, premium = rejected(paste0("premium|", secs)),
+       sorting = sapply(trait_names, function(t) rejected(paste0(t, "|", secs, "|sorting"))))
 }

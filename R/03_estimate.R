@@ -16,6 +16,7 @@ here::i_am("R/03_estimate.R")
 root <- here::here()
 source(file.path(root, "R", "piaac_prepare.R"))
 source(file.path(root, "R", "estimators.R"))
+source(file.path(root, "R", "country_summaries.R"))
 
 options(piaac.cores = max(1L, as.integer(Sys.getenv("PIAAC_CORES", "1"))))
 refresh <- Sys.getenv("PIAAC_REFRESH", "0") == "1"
@@ -101,5 +102,23 @@ utils::write.csv(data.frame(country = paper_countries, t(sapply(country_list, fu
   public = sum(d$sector == "Public"), private = sum(d$sector == "Private"), education = sum(d$industry == "P"),
   teachers = if ("occupation2" %in% names(d)) sum(d$occupation2 == "23", na.rm = TRUE) else 0)))),
   file.path(results_dir, "group_sizes.csv"), row.names = FALSE)
+
+# ---- outputs the documents read as they are -----------------------------------------------------
+# Tests of homogeneity across countries (Cochran 1954; Appendix Table A10) and the descriptive
+# statistics of Table 1. Rendering never computes: it reads these files.
+split_res <- readRDS(file.path(results_dir, "art_industry_split.rds"))
+edu_terms <- c("premium|P", "OPEM|P|contrib", "AGRE|P|contrib", "OPEM|P|sorting", "AGRE|P|sorting")
+utils::write.csv(do.call(rbind, lapply(edu_terms, function(t) data.frame(term = t, homogeneity_test(split_res, t)))),
+                 file.path(results_dir, "homogeneity_education.csv"), row.names = FALSE)
+hc <- industry_homogeneity(split_res)
+utils::write.csv(data.frame(quantity = c("premium", paste0("sorting|", trait_names)), rejected = c(hc$premium, hc$sorting),
+                            tested = length(hc$industries)), file.path(results_dir, "homogeneity_industries.csv"), row.names = FALSE)
+wm <- function(x, w) stats::weighted.mean(x, w, na.rm = TRUE)
+utils::write.csv(do.call(rbind, lapply(paper_countries, function(cc) {
+  d <- country_list[[cc]]; wt <- d$SPFWT0
+  data.frame(country = cc, n = nrow(d), women = 100 * wm(d$gender == "Women", wt), tertiary = 100 * wm(as.integer(d$education) >= 4, wt),
+             literacy = wm(rowMeans(d[, paste0("PVLIT", 1:10)]), wt), influence = wm(d$influence, wt), organisation = wm(d$organisation, wt),
+             learning = wm(d$learning, wt), pressure = wm(d$pressure, wt), cooperation = wm(d$cooperation, wt)) })),
+  file.path(results_dir, "descriptives.csv"), row.names = FALSE)
 
 message("Estimates written to ", results_dir)
