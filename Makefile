@@ -36,5 +36,5 @@ render:
 	cd manuscript && $(UTF8) quarto render appendix.qmd --to pdf
 
 check:
-	Rscript -e 'for (p in c("here", "haven", "tidyselect", "mediation", "AER", "ggplot2", "patchwork", "ragg", "knitr", "rmarkdown")) cat(sprintf("%-12s %s\n", p, tryCatch(as.character(packageVersion(p)), error = function(e) "MISSING")))'
+	Rscript -e 'for (p in c("here", "haven", "tidyselect", "mediation", "AER", "ggplot2", "patchwork", "ggrepel", "ragg", "knitr", "rmarkdown")) cat(sprintf("%-12s %s\n", p, tryCatch(as.character(packageVersion(p)), error = function(e) "MISSING")))'
 	quarto --version

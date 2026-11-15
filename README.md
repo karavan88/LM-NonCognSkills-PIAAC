@@ -18,7 +18,7 @@ redistributed here; see *Data*.
 ## Requirements
 
 - R 4.4 (the study used 4.4.1) with the packages `here`, `haven`, `tidyselect`,
-  `mediation` (4.5.1), `AER`, `ggplot2`, `patchwork`, `ragg`, `knitr`, `rmarkdown`.
+  `mediation` (4.5.1), `AER`, `ggplot2`, `patchwork`, `ggrepel`, `ragg`, `knitr`, `rmarkdown`.
   `make check` lists what is installed.
 - Quarto 1.5 or later; a TeX distribution with XeLaTeX and the TeX Gyre fonts for
   the PDF appendix (the main document renders to Word).

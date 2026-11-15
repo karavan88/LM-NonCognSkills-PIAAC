@@ -416,3 +416,34 @@ industry_split_estimator <- function(b = blocks4) {
     out
   }
 }
+
+# ---- linear mediation effects in subsamples ---------------------------------------------------
+# The total effect, the direct effect and the indirect effect through each block for one sample:
+# the same linear mediator and outcome equations as R/04_mediation.R (indirect effect = effect of
+# the skill on the block index), here with replicate weights and plausible values so that groups
+# of employees can be compared. Terms: "SKILL|total", "SKILL|direct", "SKILL|<block>".
+block_effects <- function(d, w, b = blocks4) {
+  rhs <- paste(c(base_rhs, unlist(b)), collapse = " + ")
+  d <- complete_for(d, rhs, c("log_wage", w)); d$.w <- d[[w]]
+  m <- wls(paste("log_wage ~", rhs), d); X <- stats::model.matrix(m)
+  beta <- stats::coef(m); beta[is.na(beta)] <- 0
+  tl <- attr(stats::terms(m), "term.labels"); asg <- attr(X, "assign")
+  out <- c(stats::setNames(stats::coef(wls(paste("log_wage ~", base_rhs), d))[trait_names], paste0(trait_names, "|total")),
+           stats::setNames(beta[trait_names], paste0(trait_names, "|direct")))
+  for (k in names(b)) {
+    cols <- which(asg > 0 & tl[pmax(asg, 1)] %in% b[[k]])
+    d$.H <- drop(X[, cols, drop = FALSE] %*% beta[cols])
+    out <- c(out, stats::setNames(stats::coef(wls(paste(".H ~", base_rhs), d))[trait_names], paste0(trait_names, "|", k)))
+  }
+  out
+}
+effects_by_group_estimator <- function(groups, b = blocks4) {
+  # groups: named list of functions d -> logical. Terms are "<group>|SKILL|<part>"; with 2 groups
+  # the difference (first minus second) is added as "diff|SKILL|<part>".
+  function(d, w) {
+    r <- lapply(groups, function(g) block_effects(d[which(g(d)), , drop = FALSE], w, b))
+    o <- unlist(lapply(names(r), function(n) stats::setNames(r[[n]], paste0(n, "|", names(r[[n]])))))
+    if (length(r) == 2) o <- c(o, stats::setNames(r[[1]] - r[[2]], paste0("diff|", names(r[[1]]))))
+    o
+  }
+}

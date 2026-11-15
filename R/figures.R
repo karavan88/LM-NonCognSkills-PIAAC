@@ -386,3 +386,29 @@ fig_industry_split <- function(split, ch, unit = "%") {
     labs(x = paste0("Contribution to the indirect effect through industry, per SD of the skill (", unit, ")"), y = NULL) +
     theme_paper() + theme(axis.text.y = element_text(size = 6.8), strip.text = element_text(size = 7.2, face = "bold"))
 }
+
+fig_education_pay <- function(split, split_d, traits = c("OPEM", "AGRE")) {
+  # Each country's education term of the indirect effect through industry (the skill's effect on working in
+  # education times the wage differential of education) against that wage differential, with 95% intervals.
+  # split, split_d: industry_split_estimator() results for log wages and for the earnings decile
+  # (the latter already in percentile points / 100).
+  one <- function(s, sample) do.call(rbind, lapply(traits, function(tr) {
+    y <- country_long(s, paste0(tr, "|P|contrib")); x <- country_long(s, "premium|P")
+    data.frame(panel = paste0(trait_label[[tr]], "\n", sample), country = y$country, x = 100 * x$estimate[match(y$country, x$country)],
+               y = 100 * y$estimate, lo = 100 * y$lo, hi = 100 * y$hi) }))
+  tab <- rbind(one(split, sprintf("Log hourly wages, %d countries (%%)", length(split))),
+               one(split_d, sprintf("Earnings decile, %d countries (percentile points)", length(split_d))))
+  lv <- unique(tab$panel); tab$panel <- factor(paste0(letters[match(tab$panel, lv)], ". ", tab$panel), levels = paste0(letters[seq_along(lv)], ". ", lv))
+  ggplot(tab, aes(x, y)) +
+    geom_hline(yintercept = 0, colour = pal$zero, linewidth = 0.35) +
+    geom_vline(xintercept = 0, colour = pal$zero, linewidth = 0.35) +
+    geom_linerange(aes(ymin = lo, ymax = hi), colour = pal$ink2, linewidth = 0.3, alpha = 0.55) +
+    geom_point(shape = 21, size = 1.5, fill = pal$mean, colour = pal$mean, stroke = 0.3) +
+    ggrepel::geom_text_repel(aes(label = country), size = 1.9, colour = pal$ink, seed = 1, max.overlaps = Inf,
+                             segment.size = 0.15, segment.colour = pal$muted, box.padding = 0.15, point.padding = 0.1, min.segment.length = 0.2) +
+    scale_x_continuous(labels = minus_lab) + scale_y_continuous(labels = minus_lab) +
+    facet_wrap(~panel, nrow = 2, scales = "free") +
+    labs(x = "Wage differential of the education industry against the average job of comparable workers",
+         y = "Education term of the indirect effect\nthrough industry, per SD of the skill") +
+    theme_paper() + theme(strip.text = element_text(size = 6.8, face = "bold"))
+}

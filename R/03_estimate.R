@@ -79,10 +79,27 @@ if (variant == "main") {
   cached("rob_nobonus",   rc(with_outcome(mean_gradient_estimator(rhs_hc), "log_wage_nobonus")), prefix = "")
   # split-half instrumental variables (Gillen, Snowberg and Yariv 2019), countries with the long scales
   cached("rob_oriv",      rc(oriv_estimator(controls_upto(2)), countries = B_countries), prefix = "")
-  # ---- the industry indirect effect split by industry (Appendix figure) --------------------------
-  cached("industry_split", run_countries(country_list, industry_split_estimator(), n_pv = 10, reps_on_pv = 1))
   # ---- robustness values of the direct effects (Cinelli and Hazlett 2020; Appendix Figure A2) ----
   cached("rv_M1",         rc(robustness_value_estimator(rhs_hc)), prefix = "")
   cached("rv_full",       rc(robustness_value_estimator(rhs_upto(6))), prefix = "")   # full direct-effect model
 }
+# ---- the indirect effect through industry: by industry, by sector, without education ----------
+# (Appendix Figures A3 and A4, Appendix Tables A8 and A9)
+cached("industry_split", rc(industry_split_estimator()))
+grp <- function(...) effects_by_group_estimator(list(...))
+everyone <- function(d) rep(TRUE, nrow(d))
+occ2_countries <- names(which(has("occupation2")))
+b_occ2 <- blocks4; b_occ2$job_sorting <- c("occupation2", "sector", "establishment_size")
+cached("effects_all",          rc(grp(all = everyone)))
+cached("effects_no_education", rc(grp(all = function(d) d$industry != "P")))                  # ISIC section P
+cached("effects_sector",       rc(grp(public = function(d) d$sector == "Public", private = function(d) d$sector == "Private")))
+cached("effects_occ",          rc(grp(all = everyone), countries = occ2_countries))
+cached("effects_occ2",         rc(effects_by_group_estimator(list(all = everyone), b_occ2), countries = occ2_countries))
+cached("effects_occ2_noteach", rc(effects_by_group_estimator(list(all = function(d) is.na(d$occupation2) | d$occupation2 != "23"), b_occ2),
+                                  countries = occ2_countries))                               # ISCO-08 23: teaching professionals
+utils::write.csv(data.frame(country = paper_countries, t(sapply(country_list, function(d) c(
+  public = sum(d$sector == "Public"), private = sum(d$sector == "Private"), education = sum(d$industry == "P"),
+  teachers = if ("occupation2" %in% names(d)) sum(d$occupation2 == "23", na.rm = TRUE) else 0)))),
+  file.path(results_dir, "group_sizes.csv"), row.names = FALSE)
+
 message("Estimates written to ", results_dir)

@@ -64,3 +64,10 @@ country_and_summary <- function(results, terms = NULL) {
   long$k <- NA; long$I2 <- NA; long$n_pos <- NA; long$n_neg <- NA; long$n_same_sign <- NA
   rbind(long, cross_country(long))
 }
+
+homogeneity_test <- function(results, term) {
+  # Cochran's (1954) Q: are the country estimates of one term equal? Chi-square with K - 1 df.
+  x <- country_long(results, term); w <- 1 / x$se^2
+  Q <- sum(w * (x$estimate - sum(w * x$estimate) / sum(w))^2)
+  list(Q = Q, df = nrow(x) - 1, p = stats::pchisq(Q, nrow(x) - 1, lower.tail = FALSE))
+}

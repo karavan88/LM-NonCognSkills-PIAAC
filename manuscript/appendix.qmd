@@ -94,6 +94,18 @@ res <- c(res, list(
 res$d_seq <- med_seq(res$d_ch)
 med_info <- M("run_info")
 flow <- utils::read.csv(file.path(paper, "results", "sample_flow.csv"))
+# Indirect effect through industry by sector, without the education industry and by country
+# (replicate weights and plausible values). Decile results are in percentile points / 100.
+dec10 <- function(x, pattern) lapply(x, function(d) { i <- grepl(pattern, d$term); d$estimate[i] <- d$estimate[i] / 10; d$se[i] <- d$se[i] / 10; d })
+res <- c(res, list(
+  e_all = R("art_effects_all"), e_noedu = R("art_effects_no_education"), e_sec = R("art_effects_sector"),
+  e_occ = R("art_effects_occ"), e_occ2 = R("art_effects_occ2"), e_noteach = R("art_effects_occ2_noteach"),
+  d_e_all = RD("effects_all"), d_e_noedu = RD("effects_no_education"), d_e_sec = RD("effects_sector"),
+  d_e_occ = RD("effects_occ"), d_e_occ2 = RD("effects_occ2"), d_e_noteach = RD("effects_occ2_noteach"),
+  d_ind = dec10(RD("industry_split", FALSE), "contrib$|^premium")))
+if (is.null(res$ind)) res$ind <- R("art_industry_split")
+gsize <- utils::read.csv(file.path(paper, "results", "group_sizes.csv"))
+gsize_d <- utils::read.csv(file.path(paper, "results_decile", "group_sizes.csv"))
 countries <- names(res$seq)
 K <- length(countries)
 A_countries <- names(res$A)
@@ -166,7 +178,7 @@ fig <- function(p, name, width = 6.5, height = 4) {
 
 *Returns to non-cognitive skills: Do they arise through education, job sorting, or work tasks?*
 
-This appendix accompanies the study. Section A reports the sample construction (Table A1); Section B the total, indirect and direct effects for every country, for log hourly wages in the 12 main countries and for the earnings decile in the 19 countries of the decile sample (Tables A2–A5); Section C the skill × job-demand interactions under 3 demand measures and the sensitivity of the mediation estimates to the occupation and sector block (Tables A6 and A7); Section D the robustness checks summarized in the study (Figures A1 and A2) and the indirect effect through industry split by industry (Figure A3). Significance marks (\* p < 0.10, \*\* p < 0.05, \*\*\* p < 0.01) and all definitions follow the study.
+This appendix accompanies the study. Section A reports the sample construction (Table A1); Section B the total, indirect and direct effects for every country, for log hourly wages in the 12 main countries and for the earnings decile in the 19 countries of the decile sample (Tables A2–A5); Section C the skill × job-demand interactions under 3 demand measures and the sensitivity of the mediation estimates to the occupation and sector block (Tables A6 and A7); Section D the robustness checks summarized in the study (Figures A1 and A2) and the indirect effect through industry split by industry (Figure A3); Section E the indirect effect through industry by sector, without the education industry and with 2-digit occupations (Table A8), the direct effects by sector (Table A9), and the education term of each country against the wage differential of its education industry (Figure A4). Significance marks (\* p < 0.10, \*\* p < 0.05, \*\*\* p < 0.01) and all definitions follow the study.
 
 # A. Sample construction
 
@@ -398,6 +410,78 @@ fig(fig_robustness_values(res$rv1), "fig9_robustness_values", 6.2, 3)
 #| label: fig-s4
 #| fig-cap: "Indirect effect through industry, split by industry. For each ISIC Rev. 4 section, the contribution is the effect of the skill on the probability of working in that industry times the industry's wage differential, which is shown in parentheses relative to the average job of workers with comparable education, cognitive skills, experience and tenure, occupation, sector and tasks. Mean of 12 countries with 95% intervals from the replicate weights and plausible values (%). Industries are ordered by their wage differential. Diamond: the indirect effect through industry from mediate, estimated separately; the industry terms add up to it up to the averaging of plausible values and the omitted not-reported category."
 fig(fig_industry_split(res$ind, res$ch), "fig10_industry_split", 6.8, 5.6)
+```
+
+```{=latex}
+\FloatBarrier
+```
+
+# E. Industry, sector and country
+
+```{r}
+#| label: sector-data
+grp_grid <- function(rows, fun, pre, part) do.call(rbind, lapply(rows, function(r)
+  c(r[1], sapply(trait_names, function(tr) fun(row_of(paste0(pre, r[2]), paste0(r[3], "|", tr, "|", part)))))))
+k_occ <- length(res$e_occ2); k_occ_d <- length(res$d_e_occ2)
+rng <- function(x) paste(format(min(x), big.mark = ","), "to", format(max(x), big.mark = ","))
+qt <- function(r, term) { q <- homogeneity_test(res[[r]], term)
+  sprintf("Q = %.1f, %d df, %s", q$Q, q$df, if (q$p < 0.001) "p < 0.001" else sprintf("p = %.3f", q$p)) }
+```
+
+Table A8 reports the indirect effect through industry in groups of employees, and Table A9 the direct effects by sector. Figure A4 compares, country by country, the education term of the indirect effect through industry with the wage differential of the education industry. The homogeneity test of @cochran1954 rejects equality across countries for the wage differential (log wages: `r qt("ind", "premium|P")`; earnings decile: `r qt("d_ind", "premium|P")`) and for the education term of open-mindedness (`r qt("ind", "OPEM|P|contrib")`; `r qt("d_ind", "OPEM|P|contrib")`) and agreeableness (`r qt("ind", "AGRE|P|contrib")`; `r qt("d_ind", "AGRE|P|contrib")`). For the effect of the skill on working in education the statistics are smaller (open-mindedness: `r qt("ind", "OPEM|P|sorting")`; `r qt("d_ind", "OPEM|P|sorting")`; agreeableness: `r qt("ind", "AGRE|P|sorting")`; `r qt("d_ind", "AGRE|P|sorting")`).
+
+```{r}
+#| label: tbl-s11
+#| tbl-cap: "Indirect effect of each non-cognitive skill through industry: without the education industry, by sector, and with 2-digit occupations"
+ie_rows <- list(c("All employees", "e_all", "all"), c("Without the education industry", "e_noedu", "all"),
+  c("Public employees", "e_sec", "public"), c("Private employees", "e_sec", "private"), c("Public minus private", "e_sec", "diff"),
+  c("Occupation groups", "e_occ", "all"), c("2-digit occupations", "e_occ2", "all"),
+  c("2-digit occupations, without teaching professionals", "e_noteach", "all"))
+notes_ie <- paste("*Notes:* Indirect effect through the industry block from the linear mediator and outcome equations of the study,",
+  "estimated in each group of employees with all 6 blocks in the model; mean of countries, with standard errors from the replicate weights and the 10 plausible",
+  "values in parentheses.", stars_note, "The estimates for all employees differ slightly from Table 2, which uses the mean of the plausible values.",
+  "The education industry is ISIC Rev. 4 section P. Public minus private leaves out the non-profit sector; public employees per country:",
+  rng(gsize$public), "(log wages) and", rng(gsize_d$public), "(earnings decile). The last 3 rows cover the", k_occ, "countries of the log-wage sample and the", k_occ_d,
+  "countries of the decile sample that release 2-digit ISCO-08 codes, with the 4 occupation groups or the 2-digit occupations in the occupation and sector block;",
+  "teaching professionals are sub-major group 23.")
+ltable(rbind(grp_grid(ie_rows, est_star, "", "industry"), grp_grid(ie_rows, est_star, "d_", "industry")),
+       sub = rbind(grp_grid(ie_rows, se_par, "", "industry"), grp_grid(ie_rows, se_par, "d_", "industry")),
+       header = c("", "Extraversion", "Conscien-\ntiousness", "Open-\nmindedness", "Emotional\nstability", "Agreeable-\nness"), align = "lccccc",
+       panels = setNames(c(1, length(ie_rows) + 1), c(sprintf("A. Log hourly wages, %d countries (%%)", K), sprintf("B. Earnings decile, %d countries (percentile points)", K_d))),
+       tabcolsep = 4, notes = notes_ie)
+```
+
+`r table_notes(notes_ie)`
+
+```{=latex}
+\FloatBarrier
+```
+
+```{r}
+#| label: tbl-s12
+#| tbl-cap: "Direct effect of each non-cognitive skill by sector of employment"
+de_rows <- list(c("Public employees", "e_sec", "public"), c("Private employees", "e_sec", "private"), c("Public minus private", "e_sec", "diff"))
+notes_de <- paste("*Notes:* Direct effect (net of education, cognitive skills, experience and tenure, occupation and sector, industry, and tasks) from the outcome",
+  "equation of the study estimated separately for public and private employees; mean of countries, with standard errors from the replicate weights and the 10",
+  "plausible values in parentheses.", stars_note, "The non-profit sector is left out. Public employees per country:", rng(gsize$public), "(log wages) and",
+  rng(gsize_d$public), "(earnings decile).")
+ltable(rbind(grp_grid(de_rows, est_star, "", "direct"), grp_grid(de_rows, est_star, "d_", "direct")),
+       sub = rbind(grp_grid(de_rows, se_par, "", "direct"), grp_grid(de_rows, se_par, "d_", "direct")),
+       header = c("", "Extraversion", "Conscien-\ntiousness", "Open-\nmindedness", "Emotional\nstability", "Agreeable-\nness"), align = "lccccc",
+       panels = setNames(c(1, length(de_rows) + 1), c(sprintf("A. Log hourly wages, %d countries (%%)", K), sprintf("B. Earnings decile, %d countries (percentile points)", K_d))),
+       tabcolsep = 4, notes = notes_de)
+```
+
+`r table_notes(notes_de)`
+
+```{=latex}
+\FloatBarrier
+```
+
+```{r}
+#| label: fig-s5
+#| fig-cap: "Education term of the indirect effect through industry and the wage differential of the education industry, by country. Horizontal axis: the wage differential of the education industry (ISIC Rev. 4 section P) against the average job of workers with comparable education, cognitive skills, experience and tenure, occupation, sector and tasks. Vertical axis: the education term, that is, the effect of the skill on the probability of working in education times that wage differential, with 95% intervals from the replicate weights and plausible values. Panels a and b: log hourly wages (%); panels c and d: earnings decile (percentile points). Countries are labeled with their ISO codes."
+fig(fig_education_pay(res$ind, res$d_ind), "fig11_education_pay", 6.5, 5.2)
 ```
 
 ```{=latex}
