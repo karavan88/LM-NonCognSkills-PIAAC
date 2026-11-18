@@ -241,6 +241,27 @@ split_sample_estimator <- function() {
   }
 }
 
+# ---- sequential shares of education and literacy, in both orders ----------------------
+# Controls added one at a time to the baseline wage equation (skills + baseline controls), on the
+# same respondents. The share of a block is the fall in the skill's coefficient when the block is
+# added. Entered first, the share of education is the broad measure of what is paid through
+# education (including the jobs, industries and tasks it leads to); entered after literacy it shows
+# how much a stepwise attribution depends on the order of entry.
+# Terms: "SKILL|total", "SKILL|edu_first", "SKILL|lit_after_edu", "SKILL|lit_first", "SKILL|edu_after_lit".
+sequential_estimator <- function() {
+  lit <- "literacy + I(literacy^2)"
+  specs <- c(base = base_rhs, edu = paste(base_rhs, "+ education"), lit = paste(base_rhs, "+", lit),
+             both = paste(base_rhs, "+ education +", lit))
+  function(d, w) {
+    d <- complete_for(d, specs[["both"]], c("log_wage", w)); d$.w <- d[[w]]
+    b <- sapply(specs, function(rhs) stats::coef(wls(paste("log_wage ~", rhs), d))[trait_names])
+    # b: rows = skills, columns = specifications
+    out <- c(b[, "base"], b[, "base"] - b[, "edu"], b[, "edu"] - b[, "both"], b[, "base"] - b[, "lit"], b[, "lit"] - b[, "both"])
+    stats::setNames(out, as.vector(outer(trait_names, c("total", "edu_first", "lit_after_edu", "lit_first", "edu_after_lit"),
+                                         function(t, q) paste0(t, "|", q))))
+  }
+}
+
 # ---- positive control: numeracy x numeracy use under several control sets ------------
 pc_variants_estimator <- function() {
   job <- "+ exper + I(exper^2) + exper_miss + tenure + I(tenure^2) + tenure_miss + occupation + industry + sector + establishment_size"

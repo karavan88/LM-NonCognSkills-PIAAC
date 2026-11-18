@@ -1,6 +1,6 @@
 ---
 title: "Appendix"
-subtitle: "Returns to non-cognitive skills: How much is paid through education?"
+subtitle: "Non-cognitive skills, cognitive skills and education: complements or substitutes in wage returns?"
 bibliography:
   - references.bib
   - packages.bib
@@ -117,8 +117,11 @@ descr <- utils::read.csv(file.path(paper, "results", "descriptives.csv"))
 # Returns in separate samples (R/03_estimate.R) for Table A12; the linear interactions are res$sc.
 # 12: deciles in the countries of the log-wage sample; 7: the countries that release deciles only.
 res$ss <- R("art_split_samples"); res$d_ss <- RD("split_samples")
-# Tertiary wage premium with and without the skills (R/03_estimate.R), Table A13.
+# Tertiary wage premium with and without the skills (R/03_estimate.R), Table A14.
 res$er <- R("art_education_return"); res$d_er <- RD("education_return")
+res$sq <- R("art_sequential"); res$d_sq <- RD("sequential")   # stepwise shares of education and literacy (R/03_estimate.R)
+sorting_pay <- rbind(cbind(sample = "log", utils::read.csv(file.path(paper, "results", "sorting_vs_pay.csv"))),
+                     cbind(sample = "decile", utils::read.csv(file.path(paper, "results_decile", "sorting_vs_pay.csv"))))
 in12 <- names(res$ss); in7 <- setdiff(names(res$d_ss), in12)
 res$d_ss12 <- res$d_ss[in12]; res$d_ss7 <- res$d_ss[in7]; res$d_sc12 <- res$d_sc[in12]; res$d_sc7 <- res$d_sc[in7]
 countries <- names(res$seq)
@@ -499,6 +502,8 @@ ltable(rbind(grp_grid(de_rows, est_star, "", "direct"), grp_grid(de_rows, est_st
 of <- function(a, n, unit = "industries") paste(a, "of", n, unit)
 q_cell <- function(h, term) { q <- h[h$term == term, ]
   paste0("Q = ", formatC(q$Q, format = "f", digits = 1), ", p ", if (q$p < 0.001) "< 0.001" else paste("=", formatC(q$p, format = "f", digits = 3))) }
+sp_cell <- function(smp, tr) { x <- sorting_pay[sorting_pay$sample == smp & sorting_pay$skill == tr, ]
+  paste0("rank corr. ", f(x$spearman, 2), " (p = ", formatC(x$spearman_p, format = "f", digits = 2), "); slope p = ", formatC(x$slope_p, format = "f", digits = 2)) }
 q_edu <- list(c("Wage differential of the education industry", "premium|P"),
   c("Education term: open-mindedness", "OPEM|P|contrib"), c("Education term: agreeableness", "AGRE|P|contrib"),
   c("Sorting into education: open-mindedness", "OPEM|P|sorting"), c("Sorting into education: agreeableness", "AGRE|P|sorting"))
@@ -507,7 +512,9 @@ q_body <- rbind(
   do.call(rbind, lapply(trait_names, function(tr) c(paste("Sorting into the industry:", tolower(trait_label[[tr]])),
     of(hc$sorting[[tr]], length(hc$industries)), of(hc_d$sorting[[tr]], length(hc_d$industries))))),
   c("Sorting into the industry: all 5 skills", of(sum(hc$sorting), 5 * length(hc$industries), "pairs"), of(sum(hc_d$sorting), 5 * length(hc_d$industries), "pairs")),
-  do.call(rbind, lapply(q_edu, function(r) c(r[1], q_cell(hom_edu, r[2]), q_cell(hom_edu_d, r[2])))))
+  do.call(rbind, lapply(q_edu, function(r) c(r[1], q_cell(hom_edu, r[2]), q_cell(hom_edu_d, r[2])))),
+  do.call(rbind, lapply(c("OPEM", "AGRE"), function(tr) c(paste("Sorting into education and its wage differential:", tolower(trait_label[[tr]])),
+    sp_cell("log", tr), sp_cell("decile", tr)))))
 notes_q <- paste("*Notes:* Q statistic of Cochran (1954) for the equality of a quantity across countries, from the country estimates and their standard errors",
   "(replicate weights and the 10 plausible values); under equality, Q follows a chi-square distribution with the number of countries minus 1 degrees of freedom",
   paste0("(", hom_edu$df[1], " and ", hom_edu_d$df[1], ")."),
@@ -515,9 +522,13 @@ notes_q <- paste("*Notes:* Q statistic of Cochran (1954) for the equality of a q
   "the number in which equality across the countries of that sample is rejected at the 5% level; the last row counts skill–industry pairs. The counts are descriptive and are not adjusted for the number of tests.",
   "The wage differential of an industry is measured against the average job of workers with comparable education, cognitive skills,",
   "experience and tenure, occupation, sector and tasks; sorting is the effect of the skill on the probability of working in the industry.",
-  "The education term is the sorting into the education industry (section P) times its wage differential.")
+  "The education term is the sorting into the education industry (section P) times its wage differential.",
+  "Panel C: Spearman rank correlation, across countries, between the effect of the skill on working in education and the wage differential of the education industry,",
+  "and the p-value of the slope of a weighted regression of the former on the latter (weights: inverse squared standard error of the sorting estimate).",
+  "A negative correlation means stronger sorting into education where it pays less; a positive slope would mean that workers sort away from education where it pays less.")
 ltable(q_body, header = c("", sprintf("Log hourly wages,\n%d countries", K), sprintf("Earnings decile,\n%d countries", K_d)), align = "lcc",
-       panels = setNames(c(1, 8), c("A. Number of industries in which equality across countries is rejected", "B. Education industry: test statistics")),
+       panels = setNames(c(1, 8, 13), c("A. Number of industries in which equality across countries is rejected", "B. Education industry: test statistics",
+                                        "C. Sorting into education against the education wage differential, across countries")),
        tabcolsep = 6, notes = notes_q)
 ```
 
@@ -594,7 +605,33 @@ ltable(hx_grid(est_star), sub = hx_grid(se_par),
 \FloatBarrier
 ```
 
-Table A13 reports the wage premium of tertiary education in 4 versions of the wage equation, with and without the non-cognitive skills and literacy.
+Table A13 reports the shares of the return to each skill that education and literacy absorb when they are added one at a time, in both orders, next to the share of education with all blocks in one equation.
+
+```{r}
+#| label: tbl-s17
+#| tbl-cap: "Shares of the return to each non-cognitive skill absorbed by education and literacy, by order of entry"
+sq_rows <- list(c("Total effect", "sq", "%s|total"), c("Education, entered first", "sq", "%s|edu_first"),
+  c("Literacy, entered after education", "sq", "%s|lit_after_edu"), c("Literacy, entered first", "sq", "%s|lit_first"),
+  c("Education, entered after literacy", "sq", "%s|edu_after_lit"), c("Education, all 6 blocks in one equation", "e_all", "all|%s|education"))
+sq_grid <- function(fun, pre = "") do.call(rbind, lapply(sq_rows, function(r) c(r[1], sapply(trait_names, function(tr) fun(row_of(paste0(pre, r[2]), sprintf(r[3], tr)))))))
+notes_sq <- paste("*Notes:* Wage equation with the 5 skills and the baseline controls, to which education (6 categories) and the literacy quadratic are added one at a time, on the same respondents.",
+  "Each share is the fall in the coefficient of the skill when the block is added; the stars test whether it is zero. Education entered first includes the occupations, industries and tasks that a degree leads to;",
+  "the last row is the indirect effect through education when all 6 blocks enter one outcome equation, which does not depend on the order of entry.",
+  "Mean of countries per SD of the skill, with standard errors from the replicate weights and the 10 plausible values in parentheses.", stars_note,
+  "Panel A in %; Panel B in percentile points of the national earnings distribution.")
+ltable(rbind(sq_grid(est_star), sq_grid(est_star, "d_")), sub = rbind(sq_grid(se_par), sq_grid(se_par, "d_")),
+       header = c("", "Extraversion", "Conscien-\ntiousness", "Open-\nmindedness", "Emotional\nstability", "Agreeable-\nness"), align = "lccccc",
+       panels = setNames(c(1, length(sq_rows) + 1), c(sprintf("A. Log hourly wages, %d countries", K), sprintf("B. Earnings decile, %d countries", K_d))),
+       tabcolsep = 4, notes = notes_sq)
+```
+
+`r table_notes(notes_sq)`
+
+```{=latex}
+\FloatBarrier
+```
+
+Table A14 reports the wage premium of tertiary education in 4 versions of the wage equation, with and without the non-cognitive skills and literacy.
 
 ```{r}
 #| label: tbl-s16

@@ -1,4 +1,4 @@
-# Returns to non-cognitive skills: how much is paid through education?
+# Non-cognitive skills, cognitive skills and education: complements or substitutes in wage returns?
 
 Code that reproduces every number, table and figure of the manuscript from the
 PIAAC Cycle 2 public-use files. The study estimates a causal mediation model of
@@ -77,9 +77,11 @@ at a time; running all 5 at once on 16 GB of memory is slower. The forests take 
 | Flow | `R/02_sample_flow.R` | `results/sample_flow.csv` | Table 1 |
 | WLS | `R/03_estimate.R` | `results/art_pc_variants.rds`, `art_mp_*.rds` | Figures 5 and 6, Table 4 |
 | | | `results/art_alloc_*.rds` | Figure 7, Table 5 |
-| | | `results/art_education_return.rds`, `education_return.csv` | tertiary premium with and without the skills (Section 5.1), Appendix Table A13 |
+| | | `results/art_education_return.rds`, `education_return.csv` | tertiary premium with and without the skills (Section 5.1), Appendix Table A14 |
+| | | `results/art_sequential.rds` | shares of education and literacy added one at a time, both orders (Section 5.1), Appendix Table A13 |
 | | | `results/art_split_samples.rds`, `art_skills_compl.rds` | Appendix Table A12 (separate samples, linear interactions) |
 | | | `results/art_effects_*.rds`, `group_sizes.csv`, `homogeneity_*.csv` | Appendix Tables A8 to A11, Appendix Figure A4 |
+| | | `results/sorting_vs_pay.csv` | sorting into education against its wage differential across countries (Section 5.1), Appendix Table A10, Panel C |
 | | | `results/art_industry_split.rds` | Appendix Figure A3 (industry effect by industry) |
 | | | `results/m1.rds`, `rob_*.rds`, `rv_M1.rds` | Appendix Figures A1 and A2 |
 | | | `results_decile/art_*.rds` | decile panels of Figures 5 and 7, Tables 3 to 5 |

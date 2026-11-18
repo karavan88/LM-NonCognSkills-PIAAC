@@ -53,6 +53,7 @@ rc <- function(fun, countries = paper_countries, data = country_list)
 # ---- complementarity with cognitive skills, education and job demands (Figures 4-6, Table 3) ----
 cached("skills_compl", rc(skills_complementarity_estimator()))
 cached("split_samples", rc(split_sample_estimator()))                  # returns by education and literacy third
+cached("sequential", rc(sequential_estimator()))                         # stepwise shares of education and literacy, both orders
 cached("pc_variants",  rc(with_cell_demand(pc_variants_estimator())))
 cached("mp_A",         rc(with_cell_demand(all_pairs_estimator("_d", "occupation2")), countries = A_countries))
 cached("mp_B",         rc(with_cell_demand(all_pairs_estimator("_z", "occupation"))))
@@ -127,6 +128,23 @@ edu_terms <- c("premium|P", "OPEM|P|contrib", "AGRE|P|contrib", "OPEM|P|sorting"
 utils::write.csv(do.call(rbind, lapply(edu_terms, function(t) data.frame(term = t, homogeneity_test(split_res, t)))),
                  file.path(results_dir, "homogeneity_education.csv"), row.names = FALSE)
 hc <- industry_homogeneity(split_res)
+# Does sorting into the education industry vary with how much that industry pays? Across countries,
+# the effect of each skill on working in education (ISIC section P) is related to the education wage
+# differential: Spearman rank correlation and a weighted least squares slope (weights 1/se^2 of the
+# sorting estimate). A positive slope would mean that workers sort away from education where it pays less.
+sp_rows <- do.call(rbind, lapply(c("OPEM", "AGRE"), function(tr) {
+  get1 <- function(x, t, col) { e <- x[[col]][x$term == t]; if (length(e)) e else NA_real_ }
+  srt <- sapply(split_res, get1, t = paste0(tr, "|P|sorting"), col = "estimate")
+  sse <- sapply(split_res, get1, t = paste0(tr, "|P|sorting"), col = "se")
+  prm <- sapply(split_res, get1, t = "premium|P", col = "estimate")
+  ok <- is.finite(srt) & is.finite(sse) & is.finite(prm)
+  rk <- suppressWarnings(stats::cor.test(prm[ok], srt[ok], method = "spearman", exact = FALSE))
+  co <- summary(stats::lm(srt[ok] ~ prm[ok], weights = 1 / sse[ok]^2))$coefficients
+  data.frame(skill = tr, countries = sum(ok), spearman = unname(rk$estimate), spearman_p = rk$p.value,
+             slope = co[2, 1], slope_se = co[2, 2], slope_p = co[2, 4],
+             sorting_mean = mean(srt[ok]), sorting_min = min(srt[ok]), sorting_max = max(srt[ok]))
+}))
+utils::write.csv(sp_rows, file.path(results_dir, "sorting_vs_pay.csv"), row.names = FALSE)
 utils::write.csv(data.frame(quantity = c("premium", paste0("sorting|", trait_names)), rejected = c(hc$premium, hc$sorting),
                             tested = length(hc$industries)), file.path(results_dir, "homogeneity_industries.csv"), row.names = FALSE)
 wm <- function(x, w) stats::weighted.mean(x, w, na.rm = TRUE)
