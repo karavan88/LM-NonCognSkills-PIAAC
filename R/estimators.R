@@ -185,6 +185,62 @@ yardstick_estimator <- function() {
   }
 }
 
+# ---- returns to education with and without the non-cognitive skills -----------------
+# The wage premium of tertiary education (against all lower levels) and of each level against
+# upper secondary, in 4 versions of the wage equation estimated on the same respondents:
+#   base  age group, gender, nativity, parental education
+#   ncs   base + the 5 non-cognitive skills
+#   lit   base + the literacy quadratic
+#   both  base + the 5 non-cognitive skills + the literacy quadratic
+# Terms are "<measure>|<version>"; "<measure>|a-b" is the difference between versions a and b,
+# that is, the part of the education premium that the added skills account for. A level that a
+# country does not have gives NA.
+education_return_estimator <- function() {
+  ctrl <- "age_band + gender + born_in_country + mother_education + father_education"
+  ncs <- paste(trait_names, collapse = " + "); lit <- "literacy + I(literacy^2)"
+  specs <- c(base = ctrl, ncs = paste(ctrl, "+", ncs), lit = paste(ctrl, "+", lit),
+             both = paste(ctrl, "+", ncs, "+", lit))
+  levels_vs_upper <- c(lower = "educationLower secondary or less", postsec = "educationPost-secondary non-tertiary",
+                       tertprof = "educationTertiary professional", bachelor = "educationBachelor",
+                       master = "educationMaster or research")
+  contrasts <- list(c("ncs", "base"), c("lit", "base"), c("both", "base"), c("both", "lit"), c("both", "ncs"))
+  function(d, w) {
+    d <- complete_for(d, paste(specs[["both"]], "+ education"), c("log_wage", w)); d$.w <- d[[w]]
+    d$tertiary <- as.numeric(as.integer(d$education) >= 4)
+    d$education <- stats::relevel(d$education, "Upper secondary")
+    est <- sapply(specs, function(rhs) {
+      b_t <- stats::coef(wls(paste("log_wage ~ tertiary +", rhs), d))[["tertiary"]]
+      cf <- stats::coef(wls(paste("log_wage ~ education +", rhs), d))
+      c(tertiary = b_t, stats::setNames(unname(cf[levels_vs_upper]), names(levels_vs_upper)))
+    })                                                   # rows: measures; columns: versions
+    out <- stats::setNames(as.vector(est), as.vector(outer(rownames(est), colnames(est), paste, sep = "|")))
+    for (k in contrasts)
+      out <- c(out, stats::setNames(est[, k[1]] - est[, k[2]], paste0(rownames(est), "|", k[1], "-", k[2])))
+    out
+  }
+}
+
+# ---- returns in separate samples: by tertiary education and by literacy third ---------
+# The wage equation with the 5 skills, the baseline controls, education and the literacy
+# quadratic, estimated separately for tertiary graduates and non-graduates, and for the top and
+# bottom thirds of literacy (weighted thirds within country, formed on each plausible value).
+# Terms: "<group>|SKILL" (graduates, non_graduates, lit_top, lit_bottom) and the differences
+# "diff_edu|SKILL" (graduates minus non-graduates) and "diff_lit|SKILL" (top minus bottom).
+split_sample_estimator <- function() {
+  rhs <- paste(base_rhs, "+ education + literacy + I(literacy^2)")
+  function(d, w) {
+    d <- complete_for(d, rhs, c("log_wage", w)); d$.w <- d[[w]]
+    ter <- as.integer(d$education) >= 4
+    o <- order(d$literacy); cw <- cumsum(d$.w[o]) / sum(d$.w)
+    third <- integer(nrow(d)); third[o] <- 1L + (cw > 1/3) + (cw > 2/3)
+    fit <- function(keep) stats::coef(wls(paste("log_wage ~", rhs), droplevels(d[keep, , drop = FALSE])))[trait_names]
+    g <- list(graduates = fit(ter), non_graduates = fit(!ter), lit_top = fit(third == 3L), lit_bottom = fit(third == 1L))
+    c(unlist(lapply(names(g), function(n) stats::setNames(g[[n]], paste0(n, "|", trait_names)))),
+      stats::setNames(g$graduates - g$non_graduates, paste0("diff_edu|", trait_names)),
+      stats::setNames(g$lit_top - g$lit_bottom, paste0("diff_lit|", trait_names)))
+  }
+}
+
 # ---- positive control: numeracy x numeracy use under several control sets ------------
 pc_variants_estimator <- function() {
   job <- "+ exper + I(exper^2) + exper_miss + tenure + I(tenure^2) + tenure_miss + occupation + industry + sector + establishment_size"

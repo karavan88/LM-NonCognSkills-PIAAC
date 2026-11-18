@@ -1,6 +1,6 @@
 ---
 title: "Appendix"
-subtitle: "Returns to non-cognitive skills: Do they arise through education, job sorting, or work tasks?"
+subtitle: "Returns to non-cognitive skills: How much is paid through education?"
 bibliography:
   - references.bib
   - packages.bib
@@ -114,6 +114,13 @@ hom_counts <- function(f) { h <- utils::read.csv(f)
 hc <- hom_counts(file.path(paper, "results", "homogeneity_industries.csv"))
 hc_d <- hom_counts(file.path(paper, "results_decile", "homogeneity_industries.csv"))
 descr <- utils::read.csv(file.path(paper, "results", "descriptives.csv"))
+# Returns in separate samples (R/03_estimate.R) for Table A12; the linear interactions are res$sc.
+# 12: deciles in the countries of the log-wage sample; 7: the countries that release deciles only.
+res$ss <- R("art_split_samples"); res$d_ss <- RD("split_samples")
+# Tertiary wage premium with and without the skills (R/03_estimate.R), Table A13.
+res$er <- R("art_education_return"); res$d_er <- RD("education_return")
+in12 <- names(res$ss); in7 <- setdiff(names(res$d_ss), in12)
+res$d_ss12 <- res$d_ss[in12]; res$d_ss7 <- res$d_ss[in7]; res$d_sc12 <- res$d_sc[in12]; res$d_sc7 <- res$d_sc[in7]
 countries <- names(res$seq)
 K <- length(countries)
 A_countries <- names(res$A)
@@ -183,7 +190,7 @@ fig <- function(p, name, width = 6.5, height = 4) {
 
 # Appendix {.unnumbered}
 
-*Returns to non-cognitive skills: Do they arise through education, job sorting, or work tasks?*
+*Returns to non-cognitive skills: How much is paid through education?*
 
 This appendix accompanies the study. Section A reports the sample construction (Table A1); Section B the total, indirect and direct effects for every country, for log hourly wages in the 12 main countries and for the earnings decile in the 19 countries of the decile sample (Tables A2–A5); Section C the skill × job-demand interactions under 3 demand measures and the sensitivity of the mediation estimates to the occupation and sector block (Tables A6 and A7); Section D the robustness checks summarized in the study (Figures A1 and A2) and the indirect effect through industry split by industry (Figure A3); Section E the indirect effect through industry by sector, without the education industry and with 2-digit occupations (Table A8), the direct effects by sector (Table A9), the tests of homogeneity across countries (Table A10), the sizes of the groups compared (Table A11), and the education term of each country against the wage differential of its education industry (Figure A4). Significance marks (\* p < 0.10, \*\* p < 0.05, \*\*\* p < 0.01) and all definitions follow the study.
 
@@ -548,6 +555,69 @@ ltable(do.call(rbind, lapply(gs_all, function(cc) c(country_name(cc), gs_cells(g
 #| fig-cap: "Education term of the indirect effect through industry and the wage differential of the education industry, by country. Horizontal axis: the wage differential of the education industry (ISIC Rev. 4 section P) against the average job of workers with comparable education, cognitive skills, experience and tenure, occupation, sector and tasks. Vertical axis: the education term, that is, the effect of the skill on the probability of working in education times that wage differential, with 95% intervals from the replicate weights and plausible values. Panels a and b: log hourly wages (%); panels c and d: earnings decile (percentile points). Countries are labeled with their ISO codes."
 fig(fig_education_pay(res$ind, res$d_ind), "fig11_education_pay", 6.5, 5.2)
 ```
+
+```{=latex}
+\FloatBarrier
+```
+
+# F. Returns by education and literacy
+
+Table A12 reports the returns to each non-cognitive skill estimated in separate samples and the linear interactions of each skill with tertiary education and literacy. They accompany the forest estimates of Table 3.
+
+```{r}
+#| label: tbl-s15
+#| tbl-cap: "Return to each non-cognitive skill by education and literacy: separate samples and linear interactions"
+hx_rows <- list(c("Tertiary graduates", "ss", "graduates|%s"), c("Non-graduates", "ss", "non_graduates|%s"),
+  c("Graduates minus non-graduates", "ss", "diff_edu|%s"), c("Top third of literacy", "ss", "lit_top|%s"),
+  c("Bottom third of literacy", "ss", "lit_bottom|%s"), c("Top minus bottom third", "ss", "diff_lit|%s"),
+  c("Skill × tertiary education", "sc", "%s|x_tertiary"), c("Skill × literacy (per SD)", "sc", "%s|x_literacy"))
+hx_sets <- c("", "d_%s12", "d_%s7")
+hx_grid <- function(fun) do.call(rbind, lapply(hx_sets, function(st) do.call(rbind, lapply(hx_rows, function(r) {
+  key <- if (st == "") r[2] else sprintf(st, r[2])
+  c(r[1], sapply(trait_names, function(tr) fun(row_of(key, sprintf(r[3], tr))))) }))))
+notes_hx <- paste("*Notes:* Wage equation with the 5 skills, the baseline controls, education and the literacy quadratic.",
+  "The first 6 rows of each panel estimate it in separate samples: tertiary graduates and non-graduates, and the top and bottom thirds of literacy within each country;",
+  "the stars of the 2 difference rows test whether the returns in the 2 samples are equal.",
+  "The last 2 rows are the coefficients on the interactions of each skill with tertiary education and with literacy, with all 10 interactions in one equation.",
+  "Mean of countries per SD of the skill, with standard errors from the replicate weights and the 10 plausible values in parentheses.", stars_note,
+  "Panel A in %; Panels B and C in percentile points of the national earnings distribution.")
+ltable(hx_grid(est_star), sub = hx_grid(se_par),
+       header = c("", "Extraversion", "Conscien-\ntiousness", "Open-\nmindedness", "Emotional\nstability", "Agreeable-\nness"), align = "lccccc",
+       panels = setNames(1 + length(hx_rows) * 0:2, c(sprintf("A. Log hourly wages, %d countries", K),
+                         sprintf("B. Earnings decile, the same %d countries", K), sprintf("C. Earnings decile, %d further countries", K_d - K))),
+       tabcolsep = 4, notes = notes_hx)
+```
+
+`r table_notes(notes_hx)`
+
+```{=latex}
+\FloatBarrier
+```
+
+Table A13 reports the wage premium of tertiary education in 4 versions of the wage equation, with and without the non-cognitive skills and literacy.
+
+```{r}
+#| label: tbl-s16
+#| tbl-cap: "Wage premium of tertiary education with and without non-cognitive skills and literacy"
+er_rows <- list(c("Baseline controls", "base"), c("Baseline + non-cognitive skills", "ncs"), c("Baseline + literacy", "lit"),
+  c("Baseline + non-cognitive skills + literacy", "both"), c("Change when the skills are added", "ncs-base"),
+  c("Change when literacy is added", "lit-base"), c("Change when the skills are added, literacy in the equation", "both-lit"))
+er_cols <- c("tertiary", "bachelor", "master")
+er_grid <- function(fun) do.call(rbind, lapply(er_rows, function(r) c(r[1],
+  sapply(er_cols, function(m) fun(row_of("er", paste0(m, "|", r[2])))), sapply(er_cols, function(m) fun(row_of("d_er", paste0(m, "|", r[2])))))))
+notes_er <- paste("*Notes:* Coefficient on tertiary education in the wage equation, estimated on the same respondents in 4 versions; the baseline controls are age group, gender, nativity and parental education.",
+  "Tertiary: all tertiary levels against all lower levels. Bachelor and Master: the level against upper secondary education, from the equation with the 6 education categories.",
+  "The last 3 rows are differences between versions, and their stars test whether the premium changes.",
+  "Mean of countries, with standard errors from the replicate weights and the 10 plausible values in parentheses.", stars_note,
+  "Log hourly wages: 100 × the coefficient, an approximate percentage difference that understates the exact one at this size. Earnings decile: percentile points of the national earnings distribution.")
+ltable(er_grid(est_star), sub = er_grid(se_par),
+       header = c("", "Tertiary", "Bachelor", "Master", "Tertiary", "Bachelor", "Master"), align = "lcccccc",
+       groups = list(list(list(label = sprintf("Log hourly wages, %d countries (%%)", K), from = 2, to = 4),
+                          list(label = sprintf("Earnings decile, %d countries", K_d), from = 5, to = 7))),
+       tabcolsep = 4, notes = notes_er)
+```
+
+`r table_notes(notes_er)`
 
 ```{=latex}
 \FloatBarrier

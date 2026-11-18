@@ -1,4 +1,4 @@
-# Returns to non-cognitive skills: do they arise through education, job sorting, or work tasks?
+# Returns to non-cognitive skills: how much is paid through education?
 
 Code that reproduces every number, table and figure of the manuscript from the
 PIAAC Cycle 2 public-use files. The study estimates a causal mediation model of
@@ -8,9 +8,10 @@ industry; job tasks), in 12
 countries with continuous hourly earnings and 7 further countries that release
 earnings as deciles. The mediation estimates are outputs of `mediation::mediate()`
 (Imai, Keele and Yamamoto 2010; Tingley et al. 2014), and their sensitivity
-analysis of `medsens()`; the other estimates are
-weighted least squares with design-based inference (80 replicate weights, 10
-plausible values).
+analysis of `medsens()`. Differences in the return by education and literacy are
+estimated with generalized random forests (`grf`; Athey, Tibshirani and Wager 2019).
+The other estimates are weighted least squares with design-based inference (80
+replicate weights, 10 plausible values).
 
 Author: Garen Avanesian. Manuscript under review (2026). The data are not
 redistributed here; see *Data*.
@@ -18,7 +19,7 @@ redistributed here; see *Data*.
 ## Requirements
 
 - R 4.4 (the study used 4.4.1) with the packages `here`, `haven`, `tidyselect`,
-  `mediation` (4.5.1), `AER`, `ggplot2`, `patchwork`, `ggrepel`, `ragg`, `knitr`, `rmarkdown`.
+  `mediation` (4.5.1), `grf` (2.6.1), `AER`, `ggplot2`, `patchwork`, `ggrepel`, `ragg`, `knitr`, `rmarkdown`.
   `make check` lists what is installed.
 - Quarto 1.5 or later; a TeX distribution with XeLaTeX and the TeX Gyre fonts for
   the PDF appendix (the main document renders to Word).
@@ -49,13 +50,14 @@ make data        # analysis data: data/derived/ (12 countries), data/derived_dec
 make flow        # sample-construction counts for Table 1
 make estimates   # weighted least squares estimates, both samples (CORES=4 by default)
 make mediation   # mediate() runs: both samples and 3 alternative blocks
+make forest      # generalized random forests, both samples
 make render      # output/main.docx (main document) and output/appendix.pdf
 ```
 
-`make all` runs the 5 steps in order. The scripts can also be called directly;
+`make all` runs the 6 steps in order. The scripts can also be called directly;
 each file header documents its environment variables (`PIAAC_CORES`,
-`PIAAC_VARIANT=decile`, `MED_BLOCKS`, `MED_SIMS`, `MED_PV`). The results of
-`make estimates` and `make mediation` are included in the repository
+`PIAAC_VARIANT=decile`, `MED_BLOCKS`, `MED_SIMS`, `MED_PV`, `FOREST_TREES`). The results of
+`make estimates`, `make mediation` and `make forest` are included in the repository
 (`results*/`), so `make render` works without re-estimating; delete a result
 file or set `PIAAC_REFRESH=1` to recompute it.
 
@@ -64,7 +66,8 @@ file or set `PIAAC_REFRESH=1` to recompute it.
 On a laptop with 8 cores: data preparation 1 minute; `make estimates` 15 minutes with 3 cores (9 for the log-wage sample, 6 for the deciles);
 the mediation runs are single-threaded and take about 1 hour (log wages), 1.5 hours
 (deciles) and 40 to 60 minutes for each of the 3 block variants when run one or two
-at a time; running all 5 at once on 16 GB of memory is slower. Rendering takes about 2 minutes.
+at a time; running all 5 at once on 16 GB of memory is slower. The forests take about 4 minutes
+(log wages) and 7 minutes (deciles) with 4 cores. Rendering takes about 2 minutes.
 
 ## What produces what
 
@@ -72,15 +75,19 @@ at a time; running all 5 at once on 16 GB of memory is slower. Rendering takes a
 |---|---|---|---|
 | Data | `R/01_prepare_data.R` | `data/derived*/` | all estimates; Table 1 descriptives |
 | Flow | `R/02_sample_flow.R` | `results/sample_flow.csv` | Table 1 |
-| WLS | `R/03_estimate.R` | `results/art_skills_compl.rds`, `art_pc_variants.rds`, `art_mp_*.rds` | Figures 4 to 6, Table 3 |
-| | | `results/art_alloc_*.rds` | Figure 7, Table 4 |
+| WLS | `R/03_estimate.R` | `results/art_pc_variants.rds`, `art_mp_*.rds` | Figures 5 and 6, Table 4 |
+| | | `results/art_alloc_*.rds` | Figure 7, Table 5 |
+| | | `results/art_education_return.rds`, `education_return.csv` | tertiary premium with and without the skills (Section 5.1), Appendix Table A13 |
+| | | `results/art_split_samples.rds`, `art_skills_compl.rds` | Appendix Table A12 (separate samples, linear interactions) |
+| | | `results/art_effects_*.rds`, `group_sizes.csv`, `homogeneity_*.csv` | Appendix Tables A8 to A11, Appendix Figure A4 |
 | | | `results/art_industry_split.rds` | Appendix Figure A3 (industry effect by industry) |
 | | | `results/m1.rds`, `rob_*.rds`, `rv_M1.rds` | Appendix Figures A1 and A2 |
-| | | `results_decile/art_*.rds` | decile panels of Figures 5 and 7, Tables 3 and 4 |
+| | | `results_decile/art_*.rds` | decile panels of Figures 5 and 7, Tables 3 to 5 |
 | Mediation | `R/04_mediation.R` | `results_mediation/art_channels.rds` | Figures 1 and 2, Table 2, Appendix Tables A2 and A3 |
 | | | `results_mediation/art_rho.rds`, `med_sens_grid.rds` | Figure 3 (sensitivity, ρ*) |
 | | | `results_mediation_decile/art_channels.rds` | decile panels, Appendix Tables A4 and A5 |
 | | | `results_mediation/art_channels_{sup,occ2,broadA}.rds` | Appendix Table A7 |
+| Forests | `R/05_forest.R` | `results/art_forest.rds`, `forest_summary.csv` (and `results_decile/`) | Table 3, Figure 4 |
 | Render | `manuscript/main.qmd`, `appendix.qmd` | `output/` | the documents |
 
 Every result file is a named list (one element per country) of data frames with
@@ -121,6 +128,14 @@ the interval bounds and p-values; `run_info.rds` records the settings.
   error combines the replicate-weight variance (Fay's balanced repeated
   replication, k = 0.3; JK2 in France) with the between-plausible-value variance
   by Rubin's rule. Co-worker demand is recomputed inside each replicate.
+- **Forests** (`R/05_forest.R`): for each country and skill, `grf::causal_forest()` with the
+  skill as a continuous treatment, the other 4 skills, literacy (mean of the plausible
+  values), education and the baseline controls as covariates, and the survey weight; 2,000
+  trees, 1 thread, seed 20261118, so a rerun reproduces the files. Reported are the average
+  return among tertiary graduates and non-graduates and in the top and bottom literacy
+  thirds, their differences, and the best linear projection of the conditional return on
+  tertiary education and literacy. Standard errors are those of `grf`; they do not use the
+  replicate weights.
 - **Units**: coefficients are multiplied by 100 and read as approximate
   percentage differences in hourly wages (%); decile coefficients are in
   percentile points.
@@ -128,7 +143,7 @@ the interval bounds and p-values; `run_info.rds` records the settings.
 ## Repository layout
 
 ```
-R/                  pipeline scripts (01 to 04) and the functions they share
+R/                  pipeline scripts (01 to 05) and the functions they share
 manuscript/         main.qmd (anonymous main document), appendix.qmd, references, Word template
 results/            WLS results, log-wage sample (committed)
 results_decile/     WLS results, earnings-decile sample (committed)

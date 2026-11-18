@@ -52,6 +52,7 @@ rc <- function(fun, countries = paper_countries, data = country_list)
 
 # ---- complementarity with cognitive skills, education and job demands (Figures 4-6, Table 3) ----
 cached("skills_compl", rc(skills_complementarity_estimator()))
+cached("split_samples", rc(split_sample_estimator()))                  # returns by education and literacy third
 cached("pc_variants",  rc(with_cell_demand(pc_variants_estimator())))
 cached("mp_A",         rc(with_cell_demand(all_pairs_estimator("_d", "occupation2")), countries = A_countries))
 cached("mp_B",         rc(with_cell_demand(all_pairs_estimator("_z", "occupation"))))
@@ -102,6 +103,21 @@ utils::write.csv(data.frame(country = paper_countries, t(sapply(country_list, fu
   public = sum(d$sector == "Public"), private = sum(d$sector == "Private"), education = sum(d$industry == "P"),
   teachers = if ("occupation2" %in% names(d)) sum(d$occupation2 == "23", na.rm = TRUE) else 0)))),
   file.path(results_dir, "group_sizes.csv"), row.names = FALSE)
+
+# ---- returns to education with and without the non-cognitive skills -----------------------------
+# Country estimates in art_education_return.rds; cross-country means (each country weighted equally,
+# se = sqrt(sum se_c^2) / K) in education_return.csv, where share = mean difference / mean premium
+# of the version the difference starts from.
+edu_ret <- cached("education_return", rc(education_return_estimator()))
+edu_long <- country_long(edu_ret); edu_long <- edu_long[is.finite(edu_long$estimate) & is.finite(edu_long$se), ]
+edu_mean <- do.call(rbind, lapply(split(edu_long, edu_long$term), function(x) {
+  k <- nrow(x); m <- mean(x$estimate); s <- sqrt(sum(x$se^2)) / k
+  data.frame(term = x$term[1], measure = sub("\\|.*$", "", x$term[1]), version = sub("^.*\\|", "", x$term[1]),
+             estimate = m, se = s, lo = m - z975 * s, hi = m + z975 * s, p = 2 * stats::pnorm(-abs(m / s)),
+             countries = k, n_sig = sum(x$p < 0.05)) }))
+ref <- sub("^.*-", "", edu_mean$version); is_diff <- grepl("-", edu_mean$version)
+edu_mean$share <- ifelse(is_diff, edu_mean$estimate / edu_mean$estimate[match(paste0(edu_mean$measure, "|", ref), edu_mean$term)], NA_real_)
+utils::write.csv(edu_mean, file.path(results_dir, "education_return.csv"), row.names = FALSE)
 
 # ---- outputs the documents read as they are -----------------------------------------------------
 # Tests of homogeneity across countries (Cochran 1954; Appendix Table A10) and the descriptive
