@@ -247,10 +247,10 @@ fig_interaction_heatmap <- function(res, title, lim = NULL, unit = "%") {
 }
 
 fig_premium_by_country <- function(mp, pc, unit = "%", title = NULL, ncountries = NULL) {
-  lab <- c(A = "Match premium:\nco-worker demand,\n2-digit occupation",
-           C = "Match premium:\nco-worker demand,\nbroad job cell",
+  lab <- c(A = "Match premium:\njob-cell demand,\n2-digit occupation",
+           C = "Match premium:\njob-cell demand,\nbroad job cell",
            B = "Match premium:\nown report",
-           PCc = "Numeracy × use:\nco-worker demand",
+           PCc = "Numeracy × use:\njob-cell demand",
            PCo = "Numeracy × use:\nown report")
   tabs <- lapply(names(mp), function(s) {
     t <- country_and_summary(mp[[s]], "match_premium"); t$spec <- lab[[s]]; t })
@@ -271,7 +271,7 @@ fig_allocation <- function(alloc_own, alloc_cell) {
     fig_forest_traits(alloc_own, m, NULL, 100, free_x = TRUE,
                       title = "a. Own report of the matched task (0\u20131 index \u00d7 100)"),
     fig_forest_traits(alloc_cell, m, "Difference in the matched task per SD of the skill", 100, free_x = TRUE,
-                      title = "b. Co-worker demand for the matched task (SD \u00d7 100)")) &
+                      title = "b. Job-cell demand for the matched task (SD \u00d7 100)")) &
     theme(strip.text = element_text(size = 7.4, face = "bold"))
 }
 

@@ -197,6 +197,8 @@ fig <- function(p, name, width = 6.5, height = 4) {
 
 This appendix accompanies the study. Section A reports the sample construction (Table A1); Section B the total, indirect and direct effects for every country, for log hourly wages in the 12 main countries and for the earnings decile in the 19 countries of the decile sample (Tables A2–A5); Section C the skill × job-demand interactions under 3 demand measures and the sensitivity of the mediation estimates to the occupation and sector block (Tables A6 and A7); Section D the robustness checks summarized in the study (Figures A1 and A2) and the indirect effect through industry split by industry (Figure A3); Section E the indirect effect through industry by sector, without the education industry and with 2-digit occupations (Table A8), the direct effects by sector (Table A9), the tests of homogeneity across countries (Table A10), the sizes of the groups compared (Table A11), and the education term of each country against the wage differential of its education industry (Figure A4). Significance marks (\* p < 0.10, \*\* p < 0.05, \*\*\* p < 0.01) and all definitions follow the study.
 
+**Interpretation of units.** Wage-return estimates are reported as approximate percentage wage differences, calculated as 100 times the log-wage coefficient. Differences between these returns and changes in the wage premium are expressed in percentage points. The same scaling is used for standard errors, confidence intervals and mediation components, preserving the additive decomposition. These are first-order approximations, which are less accurate for larger coefficients; no exponential transformation is applied. Earnings-decile estimates remain in percentile points of the national earnings distribution.
+
 # A. Sample construction
 
 ```{r}
@@ -327,16 +329,16 @@ pr_lab <- c(paste(trait_label, "×", tolower(matched_task_label[trait_names])),
 pr_grid <- function(fun) cbind(pr_lab, sapply(c("A", "C", "B", "A0", "B0"), function(r)
   sapply(pr_rows, function(t) fun(row_of(r, t)))))
 notes_pairs <- paste("*Notes:* Interaction between each non-cognitive skill and the demand for its matched task,",
-  "mean of countries with standard errors in parentheses. A: co-worker demand in two-digit",
-  "occupation cells with two-digit occupation fixed effects (7 countries). C: co-worker demand",
+  "mean of countries with standard errors in parentheses. A: job-cell demand (other respondents) in two-digit",
+  "occupation cells with two-digit occupation fixed effects (7 countries). C: job-cell demand",
   "in broad job cells. B: the respondent's own report. Job controls: experience and tenure, occupation group, sector,",
   "establishment size, and industry (two-digit occupations for A). The match premium is the mean of the 5",
-  "matched interactions minus the mean of the 20 mismatched ones. Co-worker cells need at least 15",
+  "matched interactions minus the mean of the 20 mismatched ones. Job cells need at least 15",
   "respondents; broad job cells fall back from occupation × sector × establishment size to occupation × sector and then to occupation.",
   stars_note)
 ltable(pr_grid(est_star), sub = pr_grid(se_par),
-       header = c("", "Co-worker,\ntwo-digit (A)", "Co-worker,\nbroad cell (C)", "Own\nreport (B)",
-                  "Co-worker,\ntwo-digit (A)", "Own\nreport (B)"),
+       header = c("", "Job cell,\ntwo-digit (A)", "Broad job\ncell (C)", "Own\nreport (B)",
+                  "Job cell,\ntwo-digit (A)", "Own\nreport (B)"),
        align = "lccccc", space_before = 6,
        groups = list(list(list(label = "With job controls", from = 2, to = 4),
                           list(label = "Without job controls", from = 5, to = 6))),
@@ -502,8 +504,8 @@ ltable(rbind(grp_grid(de_rows, est_star, "", "direct"), grp_grid(de_rows, est_st
 of <- function(a, n, unit = "industries") paste(a, "of", n, unit)
 q_cell <- function(h, term) { q <- h[h$term == term, ]
   paste0("Q = ", formatC(q$Q, format = "f", digits = 1), ", p ", if (q$p < 0.001) "< 0.001" else paste("=", formatC(q$p, format = "f", digits = 3))) }
-sp_cell <- function(smp, tr) { x <- sorting_pay[sorting_pay$sample == smp & sorting_pay$skill == tr, ]
-  paste0("rank corr. ", f(x$spearman, 2), " (p = ", formatC(x$spearman_p, format = "f", digits = 2), "); slope p = ", formatC(x$slope_p, format = "f", digits = 2)) }
+sp_val <- function(smp, tr, col) { x <- sorting_pay[sorting_pay$sample == smp & sorting_pay$skill == tr, col]
+  if (col == "spearman") f(x, 2) else formatC(x, format = "f", digits = 2) }
 q_edu <- list(c("Wage differential of the education industry", "premium|P"),
   c("Education term: open-mindedness", "OPEM|P|contrib"), c("Education term: agreeableness", "AGRE|P|contrib"),
   c("Sorting into education: open-mindedness", "OPEM|P|sorting"), c("Sorting into education: agreeableness", "AGRE|P|sorting"))
@@ -513,8 +515,10 @@ q_body <- rbind(
     of(hc$sorting[[tr]], length(hc$industries)), of(hc_d$sorting[[tr]], length(hc_d$industries))))),
   c("Sorting into the industry: all 5 skills", of(sum(hc$sorting), 5 * length(hc$industries), "pairs"), of(sum(hc_d$sorting), 5 * length(hc_d$industries), "pairs")),
   do.call(rbind, lapply(q_edu, function(r) c(r[1], q_cell(hom_edu, r[2]), q_cell(hom_edu_d, r[2])))),
-  do.call(rbind, lapply(c("OPEM", "AGRE"), function(tr) c(paste("Sorting into education and its wage differential:", tolower(trait_label[[tr]])),
-    sp_cell("log", tr), sp_cell("decile", tr)))))
+  do.call(rbind, lapply(c("OPEM", "AGRE"), function(tr) rbind(
+    c(paste0(trait_label[[tr]], ": rank correlation"), sp_val("log", tr, "spearman"), sp_val("decile", tr, "spearman")),
+    c(paste0(trait_label[[tr]], ": p-value of the rank correlation"), sp_val("log", tr, "spearman_p"), sp_val("decile", tr, "spearman_p")),
+    c(paste0(trait_label[[tr]], ": p-value of the weighted slope"), sp_val("log", tr, "slope_p"), sp_val("decile", tr, "slope_p"))))))
 notes_q <- paste("*Notes:* Q statistic of Cochran (1954) for the equality of a quantity across countries, from the country estimates and their standard errors",
   "(replicate weights and the 10 plausible values); under equality, Q follows a chi-square distribution with the number of countries minus 1 degrees of freedom",
   paste0("(", hom_edu$df[1], " and ", hom_edu_d$df[1], ")."),
